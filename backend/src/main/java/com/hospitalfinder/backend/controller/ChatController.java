@@ -52,13 +52,14 @@ public class ChatController {
             "insomnia", "cancer", "tumor", "lump", "burn", "cut", "wound", "fracture",
             "sprain", "symptom", "symptoms", "problem", "issue", "suffering", "hurts",
             "hurt", "hurting", "uncomfortable", "discomfort", "unwell", "sick", "ill",
-            "disease", "condition", "diagnosis", "treatment", "doctor", "specialist");
+            "disease", "condition", "diagnosis", "treatment", "doctor", "specialist",
+            "specialised", "specialized", "hospitals", "hospital", "clinic", "clinics");
 
     // Valid specializations on the platform
     private static final List<String> VALID_SPECIALIZATIONS = Arrays.asList(
-            "cardiology", "orthopedics", "pediatrics", "dermatology", "neurology",
-            "gynecology", "ent", "general medicine", "surgery", "ophthalmology",
-            "pulmonology", "oncology");
+            "Cardiology", "Orthopedics", "Pediatrics", "Dermatology", "Neurology",
+            "Gynecology", "ENT", "General Medicine", "Surgery", "Ophthalmology",
+            "Pulmonology", "Oncology");
 
     // Symptom analysis prompt (only injected when symptoms detected)
     private static final String SYMPTOM_ANALYSIS_PROMPT = """
@@ -70,12 +71,22 @@ public class ChatController {
             - If unsure, include "General Medicine"
             - Do NOT diagnose or prescribe
             - Use simple, non-alarming language
+            - Use simple, non-alarming language
             - Keep "inferred_issue" brief and general
             - Respond ONLY with the JSON, nothing else
+            - DO NOT invent or mention specific hospital names in the text/JSON unless you are specifically returning them in a different format (which you are not). The frontend will handle displaying hospitals. Your job is only to identify the SPECIALIZATION.
             """;
 
     @jakarta.annotation.PostConstruct
     public void init() {
+        if (apiKey == null || apiKey.isEmpty()) {
+            System.err.println("Warning: @Value injection failed for API Key. Attempting fallback...");
+            apiKey = System.getProperty("GROQ_API_KEY");
+            if (apiKey == null || apiKey.isEmpty()) {
+                apiKey = System.getenv("GROQ_API_KEY");
+            }
+        }
+
         if (apiKey == null || apiKey.isEmpty()) {
             System.err.println("CRITICAL: Groq API Key is NOT loaded!");
         } else {
@@ -97,6 +108,18 @@ public class ChatController {
                 if (matcher.find()) {
                     String placeName = matcher.group(1).trim();
                     System.out.println("Hospital search detected for place: " + placeName);
+
+                    // Check for "near me" intent
+                    if (placeName.equalsIgnoreCase("me") || placeName.equalsIgnoreCase("my location")) {
+                        if (request.getLatitude() != null && request.getLongitude() != null) {
+                            return handleNearbySearch(request.getLatitude(), request.getLongitude());
+                        } else {
+                            // Fallback if no location
+                            return returnAsNormalText(
+                                    "I need access to your location to find hospitals near you. Please enable location services or specify a city name (e.g., 'Hospital in Hyderabad').");
+                        }
+                    }
+
                     return handleHospitalCitySearch(placeName);
                 }
             }
@@ -136,7 +159,7 @@ public class ChatController {
             systemPrompt = SYMPTOM_ANALYSIS_PROMPT;
         } else {
             // Normal healthcare assistant prompt
-            systemPrompt = "You are a helpful healthcare assistant. Maintain conversational context. Provide general possible causes for symptoms. Limit responses to 4-6 lines. Do NOT diagnose. Always advise consulting a doctor. If user asks about hospitals near a place, tell them to use the format 'hospital near [city name]' for better results.";
+            systemPrompt = "You are a helpful healthcare assistant. Maintain conversational context. Provide general possible causes for symptoms. Limit responses to 4-6 lines. Do NOT diagnose. Always advise consulting a doctor. If user asks about hospitals near a place, tell them to use the format 'hospital near [city name]' for better results. CRITICAL: DO NOT invent hospital names. If asked for hospitals, say you can help check the database but do not list random real-world names.";
         }
 
         // Add language instruction if not English
@@ -363,14 +386,14 @@ public class ChatController {
                     }
                     // Special case handling
                     if (lower.contains("general") || lower.contains("medicine")) {
-                        return "general medicine";
+                        return "General Medicine";
                     }
                     if (lower.equals("ent") || lower.contains("ear") ||
                             lower.contains("nose") || lower.contains("throat")) {
-                        return "ent";
+                        return "ENT";
                     }
-                    // Default to general medicine if unrecognized
-                    return "general medicine";
+                    // Default to General Medicine if unrecognized
+                    return "General Medicine";
                 })
                 .distinct()
                 .collect(Collectors.toList());
@@ -532,8 +555,55 @@ public class ChatController {
         }
         return dp[s1.length()][s2.length()];
     }
+
+    /**
+     * Handle "near me" search using user coordinates
+     */
+    private ResponseEntity<?> handleNearbySearch(Double lat, Double lng) {
+        // Fetch nearest clinics (using existing repo method or explicit distance calc)
+        // Since we don't have a geo-spatial query in simple repo, we fetch all (or by
+        // wide area) and sort in memory
+        // For efficiency, let's fetch all and sort. (Assuming small dataset < 1000
+        // clinics)
+        List<Clinic> allClinics = clinicRepository.findAll();
+
+        List<Clinic> sortedClinics = allClinics.stream()
+                .filter(c -> c.getLatitude() != null && c.getLongitude() != null)
+                .sorted((c1, c2) -> {
+                    double dist1 = calculateDistance(lat, lng, c1.getLatitude(), c1.getLongitude());
+                    double dist2 = calculateDistance(lat, lng, c2.getLatitude(), c2.getLongitude());
+                    return Double.compare(dist1, dist2);
+                })
+                .limit(MAX_HOSPITAL_RESULTS)
+                .collect(Collectors.toList());
+
+        if (sortedClinics.isEmpty()) {
+            return returnAsNormalText("No hospitals found near your current location.");
+        }
+
+        // Build response
+        List<Map<String, Object>> hospitalList = new ArrayList<>();
+        for (Clinic clinic : sortedClinics) {
+            Map<String, Object> hospital = new HashMap<>();
+            hospital.put("id", clinic.getId());
+            hospital.put("name", clinic.getName());
+            hospital.put("imageUrl", clinic.getImageUrl() != null ? clinic.getImageUrl() : "");
+            hospital.put("city", clinic.getCity());
+            hospital.put("rating", clinic.getRating() != null ? clinic.getRating() : 0.0);
+            hospital.put("address", clinic.getAddress() != null ? clinic.getAddress() : "");
+            hospital.put("latitude", clinic.getLatitude());
+            hospital.put("longitude", clinic.getLongitude());
+
+            double dist = calculateDistance(lat, lng, clinic.getLatitude(), clinic.getLongitude());
+            hospital.put("distance", Math.round(dist * 10.0) / 10.0);
+
+            hospitalList.add(hospital);
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("type", "hospitals");
+        response.put("hospitals", hospitalList);
+        response.put("reply", "Here are the hospitals closest to your location:");
+        return ResponseEntity.ok(response);
+    }
 }
-
-
-
-

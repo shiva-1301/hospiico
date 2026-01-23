@@ -1,0 +1,22 @@
+{
+  "name": "Dr. Rajesh Kumar",
+  "email": "rajesh.kumar@cityhospital.com",
+  "password": "hospital123",
+  "phone": "9876543210",
+  "hospitalName": "City General Hospital",
+  "address": "Plot No. 45, Banjara Hills Road",
+  "city": "Hyderabad",
+  "state": "Telangana",
+  "pincode": "500034",
+  "hospitalPhone": "040-23456789",
+  "hospitalEmail": "info@citygeneralhospital.com",
+  "specializations": [
+    {"specialization": "Cardiology"},
+    {"specialization": "Orthopedics"},
+    {"specialization": "General Medicine"}
+  ],
+  "description": "City General Hospital is a leading multi-specialty hospital in Hyderabad, providing world-class healthcare services with state-of-the-art facilities and experienced medical professionals.",
+  "latitude": 17.4239,
+  "longitude": 78.4738,
+  "imageUrl": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800"
+}

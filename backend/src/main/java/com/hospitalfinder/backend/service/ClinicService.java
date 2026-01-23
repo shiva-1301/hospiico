@@ -11,6 +11,7 @@ import com.hospitalfinder.backend.dto.ClinicSummaryDTO;
 import com.hospitalfinder.backend.entity.Clinic;
 import com.hospitalfinder.backend.entity.Specialization;
 import com.hospitalfinder.backend.repository.ClinicRepository;
+import com.hospitalfinder.backend.repository.DoctorRepository;
 import com.hospitalfinder.backend.repository.SpecializationRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ public class ClinicService {
 
     private final ClinicRepository clinicRepository;
     private final SpecializationRepository specializationRepository;
+    private final DoctorRepository doctorRepository;
 
     public List<ClinicSummaryDTO> getFilteredClinics(String city, List<String> specializations, String search,
             Double lat, Double lng) {
@@ -153,6 +155,24 @@ public class ClinicService {
     public ClinicResponseDTO getClinicById(String id) {
         Clinic clinic = clinicRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Clinic not found"));
-        return new ClinicResponseDTO(clinic);
+
+        ClinicResponseDTO response = new ClinicResponseDTO(clinic);
+        // Manually fetch and set doctors
+        response.setDoctors(doctorRepository.findByClinicId(id));
+
+        return response;
+    }
+
+    public ClinicResponseDTO getClinicByOwnerId(String ownerId) {
+        Clinic clinic = clinicRepository.findByOwnerId(ownerId);
+        if (clinic == null) {
+            throw new RuntimeException("No clinic found for this owner");
+        }
+
+        ClinicResponseDTO response = new ClinicResponseDTO(clinic);
+        // Manually fetch and set doctors
+        response.setDoctors(doctorRepository.findByClinicId(clinic.getId()));
+
+        return response;
     }
 }

@@ -15,6 +15,12 @@ public class Clinic {
     @Getter
     @Setter
     private String id;
+
+    // Owner of this hospital (User with HOSPITAL role)
+    @Getter
+    @Setter
+    private String ownerId;
+
     @Getter
     @Setter
     private String name;
@@ -24,6 +30,12 @@ public class Clinic {
     @Getter
     @Setter
     private String city;
+    @Getter
+    @Setter
+    private String state;
+    @Getter
+    @Setter
+    private String pincode;
     @Getter
     @Setter
     private Double latitude;
@@ -36,6 +48,12 @@ public class Clinic {
     @Getter
     @Setter
     private String phone;
+    @Getter
+    @Setter
+    private String email;
+    @Getter
+    @Setter
+    private String description;
     @Getter
     @Setter
     private String website;

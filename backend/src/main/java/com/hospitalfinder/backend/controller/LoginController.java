@@ -38,12 +38,12 @@ public class LoginController {
         User user = userRepository.findByEmail(request.getEmail());
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new LoginResponse(false, "Invalid credentials", null, null, null, null, null));
+                    .body(new LoginResponse(false, "Invalid credentials", null, null, null, null, null, null));
         }
 
         // Generate JWT token
         String jwtToken = jwtService.generateToken(user);
-        
+
         // Create JWT cookie
         Cookie jwtCookie = new Cookie("jwt_token", jwtToken);
         jwtCookie.setMaxAge(7 * 24 * 60 * 60); // 7 days
@@ -63,20 +63,20 @@ public class LoginController {
         response.addCookie(userCookie);
 
         return ResponseEntity.ok(new LoginResponse(
-            true, 
-            "Login successful",
-            user.getId(),
-            user.getEmail(),
-            user.getName(),
-            user.getRole(),
-            jwtToken
-        ));
+                true,
+                "Login successful",
+                user.getId(),
+                user.getEmail(),
+                user.getName(),
+                user.getRole(),
+                user.getDoctorId(),
+                jwtToken));
     }
 
     @GetMapping("/me")
     public ResponseEntity<LoginResponse> me(
-        @RequestHeader(value = "Authorization", required = false) String authorization,
-        jakarta.servlet.http.HttpServletRequest request) {
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            jakarta.servlet.http.HttpServletRequest request) {
 
         // Try Authorization header first (Bearer token)
         String token = null;
@@ -98,7 +98,7 @@ public class LoginController {
 
         if (token == null || token.isBlank()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new LoginResponse(false, "Missing token", null, null, null, null, null));
+                    .body(new LoginResponse(false, "Missing token", null, null, null, null, null, null));
         }
 
         String email;
@@ -108,27 +108,27 @@ public class LoginController {
             // Optionally validate the token (if your JwtService exposes such method)
             if (!jwtService.validateToken(token)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new LoginResponse(false, "Invalid token", null, null, null, null, null));
+                        .body(new LoginResponse(false, "Invalid token", null, null, null, null, null, null));
             }
         } catch (Exception ex) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new LoginResponse(false, "Invalid token", null, null, null, null, null));
+                    .body(new LoginResponse(false, "Invalid token", null, null, null, null, null, null));
         }
 
         User user = userRepository.findByEmail(email);
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new LoginResponse(false, "User not found", null, null, null, null, null));
+                    .body(new LoginResponse(false, "User not found", null, null, null, null, null, null));
         }
 
         return ResponseEntity.ok(new LoginResponse(
-            true,
-            "User fetched",
-            user.getId(),
-            user.getEmail(),
-            user.getName(),
-            user.getRole(),
-            token
-        ));
+                true,
+                "User fetched",
+                user.getId(),
+                user.getEmail(),
+                user.getName(),
+                user.getRole(),
+                user.getDoctorId(),
+                token));
     }
 }

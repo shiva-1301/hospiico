@@ -13,17 +13,19 @@ import org.springframework.core.env.Environment;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import io.github.cdimascio.dotenv.Dotenv;
+
 @SpringBootApplication(exclude = {
-	SpringApplicationAdminJmxAutoConfiguration.class,
-	JmxAutoConfiguration.class,
-	WebSocketServletAutoConfiguration.class
+		SpringApplicationAdminJmxAutoConfiguration.class,
+		JmxAutoConfiguration.class,
+		WebSocketServletAutoConfiguration.class
 })
 @EnableScheduling
 @EnableAsync
 public class HospitalBookingBackendApplication {
 
 	private static final Logger logger = LoggerFactory.getLogger(HospitalBookingBackendApplication.class);
-	
+
 	private final Environment env;
 
 	public HospitalBookingBackendApplication(Environment env) {
@@ -31,6 +33,20 @@ public class HospitalBookingBackendApplication {
 	}
 
 	public static void main(String[] args) {
+		// Load .env variables into System properties
+		try {
+			Dotenv dotenv = Dotenv.configure()
+					.directory("./")
+					.ignoreIfMissing()
+					.load();
+
+			dotenv.entries().forEach(entry -> {
+				System.setProperty(entry.getKey(), entry.getValue());
+			});
+			System.out.println("Loaded .env variables successfully.");
+		} catch (Exception e) {
+			System.err.println("Failed to load .env: " + e.getMessage());
+		}
 
 		SpringApplication.run(HospitalBookingBackendApplication.class, args);
 	}

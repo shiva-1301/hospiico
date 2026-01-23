@@ -12,6 +12,8 @@ export type AuthUser = {
   phone?: string;
   age?: number;
   gender?: string;
+  role?: string; // USER, HOSPITAL, ADMIN, DOCTOR
+  doctorId?: string; // Links doctor users to their doctor profile
 };
 
 export type AuthState = {
@@ -33,6 +35,7 @@ export type AuthResponse = {
   name: string;
   role: string;
   token: string;
+  doctorId?: string; // Added doctorId
 };
 
 export const login = createAsyncThunk<AuthResponse, Credentials>(
@@ -119,6 +122,9 @@ const authSlice = createSlice({
             state.user = {
               id: action.payload.id.toString(),
               email: action.payload.email,
+              name: action.payload.name,
+              role: action.payload.role,
+              doctorId: action.payload.doctorId,
             };
           }
           // Store the JWT token in localStorage
@@ -152,6 +158,9 @@ const authSlice = createSlice({
             state.user = {
               id: action.payload.id.toString(),
               email: action.payload.email,
+              name: action.payload.name,
+              role: action.payload.role,
+              doctorId: action.payload.doctorId,
             };
           }
           // Store the JWT token in localStorage

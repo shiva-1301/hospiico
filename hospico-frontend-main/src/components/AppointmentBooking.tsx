@@ -267,9 +267,9 @@ const AppointmentBooking = ({ hospitalId, doctorId, doctorName, specialization, 
       const appointmentDateTime = `${selectedDate}T${selectedSlot}:00`;
 
       const appointmentData = {
-        userId: user?.id ? parseInt(user.id) : null,
-        clinicId: parseInt(hospitalId),
-        doctorId: parseInt(selectedDoctor),
+        userId: user?.id ? user.id : null,
+        clinicId: hospitalId, // Keeping as string, DTO expects string
+        doctorId: selectedDoctor, // Keeping as string
         appointmentTime: appointmentDateTime,
         patientName,
         patientAge: parseInt(patientAge),

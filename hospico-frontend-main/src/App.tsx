@@ -15,11 +15,14 @@ import { useAuthInitializer } from "./hooks/useAuthInitializer";
 import { useKeepAlive } from "./hooks/useKeepAlive";
 import FullScreenLoader from "./components/FullScreenLoader";
 import PartnerLogin from "./pages/PartnerLogin";
+import PartnerSignup from "./pages/PartnerSignup";
 import Emergency from "./pages/Emergency";
 import HospitalProfile from "./pages/HospitalProfile";
 import Profile from "./pages/Profile.tsx";
 import MyAppointments from "./pages/MyAppointments";
 import MedicalReports from "./pages/MedicalReports";
+import HospitalDashboard from "./pages/HospitalDashboard";
+import DoctorDashboard from "./pages/DoctorDashboard";
 import ChatWidget from "./components/ChatWidget";
 
 import { ThemeProvider } from "./context/ThemeContext";
@@ -81,6 +84,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/partner-login" element={<PartnerLogin />} />
+              <Route path="/partner-signup" element={<PartnerSignup />} />
               <Route
                 path="/dashboard"
                 element={
@@ -114,6 +118,22 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <MedicalReports />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/hospital-dashboard"
+                element={
+                  <ProtectedRoute>
+                    <HospitalDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/doctor-dashboard/:doctorId"
+                element={
+                  <ProtectedRoute>
+                    <DoctorDashboard />
                   </ProtectedRoute>
                 }
               />

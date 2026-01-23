@@ -31,8 +31,7 @@ public class SampleDataSeeder implements CommandLineRunner {
             List<String> specs = Arrays.asList(
                     "Cardiology", "Neurology", "Orthopedics", "Pediatrics",
                     "Dermatology", "Gynecology", "Ophthalmology", "Dentistry",
-                    "ENT", "General Medicine", "Psychiatry", "Radiology"
-            );
+                    "ENT", "General Medicine", "Psychiatry", "Radiology");
 
             for (String specName : specs) {
                 Specialization spec = new Specialization();

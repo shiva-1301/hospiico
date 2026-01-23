@@ -37,11 +37,25 @@ public class SecurityConfig {
                         // CORS preflight - MUST BE FIRST
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         // Health check endpoints
-                        .requestMatchers("/", "/api/health", "/health/**", "/actuator/**", "/actuator/health").permitAll()
+                        .requestMatchers("/", "/api/health", "/health/**", "/actuator/**", "/actuator/health")
+                        .permitAll()
                         // Auth endpoints
                         .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/users/me").permitAll()
-                        // Public API endpoints
-                        .requestMatchers("/api/clinics/**", "/api/specializations/**", "/api/chat").permitAll()
+                        .requestMatchers("/api/auth/partner/signup").permitAll()
+                        // Public API endpoints (read-only)
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/clinics/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/specializations/**").permitAll()
+                        .requestMatchers("/api/chat").permitAll()
+                        // Clinic modifications require authentication
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/clinics").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/clinics/**").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/clinics/**").authenticated()
+                        // Doctor modifications require authentication
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/clinics/*/doctors")
+                        .authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/doctors/**").authenticated()
+                        // Appointment endpoints
+                        .requestMatchers("/api/appointments/**").authenticated()
                         .requestMatchers("/api/requests/**").permitAll()
                         // Documentation
                         .requestMatchers("/error", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()

@@ -94,7 +94,7 @@ const PartnerLogin = () => {
         {/* Footer link */}
         <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
           New to our platform?{" "}
-          <a href="#" className="text-blue-600 hover:underline dark:text-blue-400 font-medium">
+          <a href="/partner-signup" className="text-blue-600 hover:underline dark:text-blue-400 font-medium">
             Request onboarding →
           </a>
         </p>

@@ -1,0 +1,49 @@
+
+    /**
+     * Handle "near me" search using user coordinates
+     */
+    private ResponseEntity<?> handleNearbySearch(Double lat, Double lng) {
+        // Fetch nearest clinics (using existing repo method or explicit distance calc)
+        // Since we don't have a geo-spatial query in simple repo, we fetch all (or by wide area) and sort in memory
+        // For efficiency, let's fetch all and sort. (Assuming small dataset < 1000 clinics)
+        List<Clinic> allClinics = clinicRepository.findAll();
+
+        List<Clinic> sortedClinics = allClinics.stream()
+                .filter(c -> c.getLatitude() != null && c.getLongitude() != null)
+                .sorted((c1, c2) -> {
+                    double dist1 = calculateDistance(lat, lng, c1.getLatitude(), c1.getLongitude());
+                    double dist2 = calculateDistance(lat, lng, c2.getLatitude(), c2.getLongitude());
+                    return Double.compare(dist1, dist2);
+                })
+                .limit(MAX_HOSPITAL_RESULTS)
+                .collect(Collectors.toList());
+
+        if (sortedClinics.isEmpty()) {
+             return returnAsNormalText("No hospitals found near your current location.");
+        }
+
+        // Build response
+        List<Map<String, Object>> hospitalList = new ArrayList<>();
+        for (Clinic clinic : sortedClinics) {
+            Map<String, Object> hospital = new HashMap<>();
+            hospital.put("id", clinic.getId());
+            hospital.put("name", clinic.getName());
+            hospital.put("imageUrl", clinic.getImageUrl() != null ? clinic.getImageUrl() : "");
+            hospital.put("city", clinic.getCity());
+            hospital.put("rating", clinic.getRating() != null ? clinic.getRating() : 0.0);
+            hospital.put("address", clinic.getAddress() != null ? clinic.getAddress() : "");
+            hospital.put("latitude", clinic.getLatitude());
+            hospital.put("longitude", clinic.getLongitude());
+            
+            double dist = calculateDistance(lat, lng, clinic.getLatitude(), clinic.getLongitude());
+            hospital.put("distance", Math.round(dist * 10.0) / 10.0);
+
+            hospitalList.add(hospital);
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("type", "hospitals");
+        response.put("hospitals", hospitalList);
+        response.put("reply", "Here are the hospitals closest to your location:");
+        return ResponseEntity.ok(response);
+    }

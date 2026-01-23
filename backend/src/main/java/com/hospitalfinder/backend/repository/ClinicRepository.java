@@ -27,7 +27,7 @@ public interface ClinicRepository extends MongoRepository<Clinic, String> {
     // For MongoDB geospatial queries, use 2dsphere index and Query annotations
     @Query("{ }")
     List<Clinic> findAllClinicsOrderedByDistance(Double latitude, Double longitude);
-    
+
     @Query("{ }")
     List<Clinic> findNearestClinics(Double latitude, Double longitude);
 
@@ -37,5 +37,9 @@ public interface ClinicRepository extends MongoRepository<Clinic, String> {
     @Query(value = "{ }", fields = "{ 'city': 1 }")
     List<String> findAllDistinctCities();
 
+    @Query("{ 'specializations.specialization': { $in: ?0 } }")
     List<Clinic> findBySpecializationsIn(List<String> specializations);
+
+    // Find clinic by owner ID
+    Clinic findByOwnerId(String ownerId);
 }

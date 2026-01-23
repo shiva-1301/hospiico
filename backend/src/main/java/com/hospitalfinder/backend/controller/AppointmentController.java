@@ -41,10 +41,15 @@ public class AppointmentController {
     @PostMapping
     public ResponseEntity<?> bookAppointment(@RequestBody AppointmentRequestDTO dto) {
 
-        // Validate User
-        var userOpt = userRepository.findById(dto.getUserId());
-        if (userOpt.isEmpty())
-            return ResponseEntity.badRequest().body("User not found");
+        // Validate User (Optional - fail only if provided and invalid)
+        if (dto.getUserId() != null && !dto.getUserId().isEmpty()) {
+            var userOpt = userRepository.findById(dto.getUserId());
+            if (userOpt.isEmpty()) {
+                // return ResponseEntity.badRequest().body("User not found");
+                // fallback to guest if not found? No, better warn if ID was sent but bad.
+                return ResponseEntity.badRequest().body("User not found");
+            }
+        }
 
         // Validate Clinic
         var clinicOpt = clinicRepository.findById(dto.getClinicId());
@@ -71,7 +76,9 @@ public class AppointmentController {
 
         // Create Appointment
         Appointment appointment = new Appointment();
-        appointment.setUserId(userOpt.get().getId());
+        if (dto.getUserId() != null && !dto.getUserId().isEmpty()) {
+            appointment.setUserId(dto.getUserId());
+        }
         appointment.setClinicId(clinicOpt.get().getId());
         appointment.setDoctorId(doctorOpt.get().getId());
         appointment.setAppointmentTime(time);
@@ -90,11 +97,10 @@ public class AppointmentController {
         return ResponseEntity.ok(new AppointmentResponseDTO(appointment));
     }
 
-
     @GetMapping("/user/{userId}")
     public ResponseEntity<?> getAppointmentsByUser(@PathVariable String userId) {
         User user = userRepository.findById(userId).orElse(null);
-        if(user == null)
+        if (user == null)
             return ResponseEntity.ok("User not found");
         var appointments = appointmentRepository.findByUserId(userId);
         var responseList = appointments.stream()
@@ -106,7 +112,7 @@ public class AppointmentController {
     @GetMapping("/clinic/{clinicId}")
     public ResponseEntity<?> getAppointmentsByClinic(@PathVariable String clinicId) {
         Clinic clinic = clinicRepository.findById(clinicId).orElse(null);
-        if(clinic == null)
+        if (clinic == null)
             return ResponseEntity.ok("Clinic not found");
         var appointments = appointmentRepository.findByClinicId(clinicId);
         var responseList = appointments.stream()
@@ -188,7 +194,6 @@ public class AppointmentController {
 
         return ResponseEntity.ok(new AppointmentResponseDTO(appointment));
     }
-
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteAppointment(@PathVariable String id) {
