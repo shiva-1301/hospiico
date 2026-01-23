@@ -1,0 +1,40 @@
+server:
+  port: ${X_ZOHO_CATALYST_LISTEN_PORT:${PORT:8080}}
+  address: 0.0.0.0
+
+spring:
+  main:
+    lazy-initialization: true
+    banner-mode: off
+    log-startup-info: false
+    allow-bean-definition-overriding: true
+    allow-circular-references: true
+  data:
+    mongodb:
+      uri: ${MONGO_DB_URI:mongodb://localhost:27017/hospital_booking}
+      auto-index-creation: true
+  devtools:
+    restart:
+      enabled: false
+  jmx:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+springdoc:
+  api-docs:
+    enabled: true
+
+application:
+  name: hospital-booking-backend
+
+groq:
+  api:
+    key: ${GROQ_API_KEY}

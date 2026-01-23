@@ -1,0 +1,59 @@
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:latest
+    container_name: hospital_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: mongodb
+      MONGO_INITDB_DATABASE: hospital_booking
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - hospital_network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/hospital_booking -u root -p mongodb --authenticationDatabase admin
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend Spring Boot Application
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hospital_backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - MONGO_DB_URI=mongodb://root:mongodb@mongodb:27017/hospital_booking?authSource=admin
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - hospital_network
+
+  # Frontend React Application
+  frontend:
+    build:
+      context: ./hospico-frontend-main
+      dockerfile: Dockerfile
+    container_name: hospital_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - hospital_network
+
+volumes:
+  mongodb_data:
+  mongodb_config:
+
+networks:
+  hospital_network:
+    driver: bridge

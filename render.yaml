@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: hospico-backend
+    env: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: DB_URL
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+
+  - type: web
+    name: hospico-frontend
+    env: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./hospico-frontend-main
