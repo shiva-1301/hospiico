@@ -9,7 +9,7 @@ import {
     Star,
     Settings,
     BarChart3,
-    Clock,
+    // Clock, // Removed unused import
     MapPin,
     Phone,
     Mail
@@ -164,9 +164,9 @@ const HospitalDashboard = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {activeTab === "overview" && <OverviewTab hospital={hospital} />}
                 {activeTab === "profile" && <ProfileTab hospital={hospital} onUpdate={fetchHospitalData} />}
-                {activeTab === "appointments" && <AppointmentsTab hospitalId={hospital.id} />}
-                {activeTab === "doctors" && <DoctorsTab hospitalId={hospital.id} />}
-                {activeTab === "reviews" && <ReviewsTab hospitalId={hospital.id} />}
+                {activeTab === "appointments" && <AppointmentsTab />}
+                {activeTab === "doctors" && <DoctorsTab />}
+                {activeTab === "reviews" && <ReviewsTab />}
             </div>
         </div>
     );
@@ -349,21 +349,21 @@ const ProfileTab = ({ hospital, onUpdate }: { hospital: Hospital; onUpdate: () =
     </div>
 );
 
-const AppointmentsTab = ({ hospitalId }: { hospitalId: string }) => (
+const AppointmentsTab = () => (
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Appointments</h2>
         <p className="text-gray-600 dark:text-gray-400">No appointments yet. Patients can book appointments through your hospital profile.</p>
     </div>
 );
 
-const DoctorsTab = ({ hospitalId }: { hospitalId: string }) => (
+const DoctorsTab = () => (
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Manage Doctors</h2>
         <p className="text-gray-600 dark:text-gray-400">Add doctors to your hospital to help patients find the right specialist.</p>
     </div>
 );
 
-const ReviewsTab = ({ hospitalId }: { hospitalId: string }) => (
+const ReviewsTab = () => (
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Patient Reviews</h2>
         <p className="text-gray-600 dark:text-gray-400">No reviews yet. Reviews will appear here once patients start rating your hospital.</p>

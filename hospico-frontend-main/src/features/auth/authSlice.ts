@@ -105,6 +105,13 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    setCredentials: (state, action: PayloadAction<{ user: AuthUser; token: string }>) => {
+      const { user, token } = action.payload;
+      state.user = user;
+      state.isAuthenticated = true;
+      state.initialized = true;
+      localStorage.setItem("jwt_token", token);
+    },
   },
   extraReducers: (builder) => {
     // LOGIN
@@ -181,5 +188,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, initializeAuth, clearError } = authSlice.actions;
+export const { logout, initializeAuth, clearError, setCredentials } = authSlice.actions;
 export default authSlice.reducer;

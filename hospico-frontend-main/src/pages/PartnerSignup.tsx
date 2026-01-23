@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../store/store";
+import { setCredentials } from "../features/auth/authSlice";
 import { API_BASE_URL } from "../api";
 import { Building2, ArrowRight, ArrowLeft, Check } from "lucide-react";
 
