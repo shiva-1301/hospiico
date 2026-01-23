@@ -6,7 +6,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
-@Component
+// @Component  // Disabled for local development
 public class KeepAliveScheduler {
 
     private static final Logger logger = LoggerFactory.getLogger(KeepAliveScheduler.class);

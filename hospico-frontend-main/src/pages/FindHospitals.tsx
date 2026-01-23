@@ -162,8 +162,15 @@ const FindHospitals = () => {
 
         data = await apiRequest<Hospital[]>(url, "GET");
 
+        // Sort by distance in ascending order (closest first)
+        const sorted = (data || []).sort((a, b) => {
+          const distA = a.distanceKm ?? a.distance ?? Number.POSITIVE_INFINITY;
+          const distB = b.distanceKm ?? b.distance ?? Number.POSITIVE_INFINITY;
+          return distA - distB;
+        });
+
         if (!cancelled) {
-          setHospitals(data || []);
+          setHospitals(sorted);
         }
       } catch (err) {
         if (!cancelled) {

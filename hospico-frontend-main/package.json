@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@capacitor/android": "^7.0.0",
-    "@capacitor/cli": "^7.0.0",
+    "@capacitor/cli": "^2.5.0",
     "@capacitor/core": "^7.0.0",
     "@capacitor/geolocation": "^7.0.0",
     "@emotion/react": "^11.14.0",

@@ -21,7 +21,13 @@ const NearbyHospitals = ({ latitude, longitude }: NearbyHospitalsProps) => {
           `/api/clinics/nearby?lat=${latitude}&lng=${longitude}`,
           "GET"
         );
-        setHospitals(data);
+        // Sort by distance in ascending order (closest first)
+        const sorted = (data || []).sort((a, b) => {
+          const distA = a.distanceKm ?? a.distance ?? Number.POSITIVE_INFINITY;
+          const distB = b.distanceKm ?? b.distance ?? Number.POSITIVE_INFINITY;
+          return distA - distB;
+        });
+        setHospitals(sorted);
       } catch (err) {
         setError((err as Error)?.message || "Failed to load nearby hospitals");
       } finally {
