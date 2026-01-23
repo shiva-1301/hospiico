@@ -11,7 +11,7 @@ spring:
     allow-circular-references: true
   data:
     mongodb:
-      uri: ${MONGO_DB_URI:mongodb://localhost:27017/hospital_booking}
+      uri: mongodb+srv://23eg106c21_db_user:Wk0NnJanrSCJNdGN@lifelink.iy3cmpk.mongodb.net/hospicoDB?retryWrites=true&w=majority
       auto-index-creation: true
   devtools:
     restart:

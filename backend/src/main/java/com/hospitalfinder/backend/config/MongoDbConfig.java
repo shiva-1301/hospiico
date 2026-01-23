@@ -72,26 +72,26 @@ public class MongoDbConfig {
     }
 
     private void seedAdminUser(UserRepository userRepository) {
-        User existingAdmin = userRepository.findByEmail("admin@lifelink.com");
-        if (existingAdmin == null) {
-            User admin = new User();
-            admin.setName("Admin");
-            admin.setEmail("admin@lifelink.com");
-            admin.setPhone("+1234567890");
-            admin.setPassword("$2a$10$slYQmyNdGzin7olVN3p5Be3DjH3qeLBtZvJAx/.OyIHsN5tFPFHGm");
-            admin.setAge(30);
-            admin.setGender("Male");
-            admin.setRole(Role.ADMIN);
-
-            userRepository.save(admin);
-            System.out.println("\n═══════════════════════════════════════════════════════════");
-            System.out.println("✓ ADMIN USER CREATED SUCCESSFULLY!");
-            System.out.println("═══════════════════════════════════════════════════════════");
-            System.out.println("EMAIL:    admin@lifelink.com");
-            System.out.println("PASSWORD: admin@123");
-            System.out.println("═══════════════════════════════════════════════════════════\n");
-        } else {
-            System.out.println("✓ Admin user already exists - skipping creation.");
+        // Create/Update Shiva admin user
+        User shivaAdmin = userRepository.findByEmail("shiva@gmail.com");
+        if (shivaAdmin == null) {
+            shivaAdmin = new User();
+            shivaAdmin.setName("shiva");
+            shivaAdmin.setEmail("shiva@gmail.com");
+            shivaAdmin.setPhone("+1234567890");
+            shivaAdmin.setAge(25);
+            shivaAdmin.setGender("Male");
         }
+        // Always update password and role to ensure correct credentials
+        shivaAdmin.setPassword("$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdLa6ID/O"); // bcrypt for "shiva"
+        shivaAdmin.setRole(Role.ADMIN);
+        
+        userRepository.save(shivaAdmin);
+        System.out.println("\n═══════════════════════════════════════════════════════════");
+        System.out.println("✓ ADMIN USER CREATED/UPDATED SUCCESSFULLY!");
+        System.out.println("═══════════════════════════════════════════════════════════");
+        System.out.println("EMAIL:    shiva@gmail.com");
+        System.out.println("PASSWORD: shiva");
+        System.out.println("═══════════════════════════════════════════════════════════\n");
     }
 }
