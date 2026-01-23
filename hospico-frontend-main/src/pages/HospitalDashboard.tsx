@@ -163,7 +163,7 @@ const HospitalDashboard = () => {
             {/* Content */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {activeTab === "overview" && <OverviewTab hospital={hospital} />}
-                {activeTab === "profile" && <ProfileTab hospital={hospital} onUpdate={fetchHospitalData} />}
+                {activeTab === "profile" && <ProfileTab />}
                 {activeTab === "appointments" && <AppointmentsTab />}
                 {activeTab === "doctors" && <DoctorsTab />}
                 {activeTab === "reviews" && <ReviewsTab />}
@@ -342,7 +342,7 @@ const OverviewTab = ({ hospital }: { hospital: Hospital }) => {
 };
 
 // Placeholder components for other tabs
-const ProfileTab = ({ hospital, onUpdate }: { hospital: Hospital; onUpdate: () => void }) => (
+const ProfileTab = () => (
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Edit Hospital Profile</h2>
         <p className="text-gray-600 dark:text-gray-400">Profile editing functionality coming soon...</p>
