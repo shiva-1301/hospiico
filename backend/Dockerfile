@@ -1,26 +1,13 @@
-# ---------- Build stage ----------
-FROM eclipse-temurin:17-jdk AS build
-
+# Build Stage
+FROM maven:3.8.5-openjdk-17 AS build
 WORKDIR /app
-
 COPY pom.xml .
-COPY .mvn .mvn
-COPY mvnw .
-RUN chmod +x mvnw
-RUN ./mvnw -B dependency:go-offline
+COPY src ./src
+RUN mvn clean package -DskipTests
 
-COPY src src
-RUN ./mvnw clean package -DskipTests
-
-# ---------- Runtime stage ----------
-FROM eclipse-temurin:17-jre
-
+# Run Stage
+FROM openjdk:17.0.1-jdk-slim
 WORKDIR /app
-
-COPY --from=build /app/target/backend-0.0.1-SNAPSHOT.jar app.jar
-
-ENV PATH="/opt/java/openjdk/bin:${PATH}"
-
-EXPOSE 9000
-
-CMD ["java", "-jar", "/app/app.jar"]
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java","-jar","app.jar"]
