@@ -11,8 +11,10 @@ spring:
     allow-circular-references: true
   data:
     mongodb:
-      uri: mongodb+srv://23eg106c21_db_user:Wk0NnJanrSCJNdGN@lifelink.iy3cmpk.mongodb.net/hospicoDB?retryWrites=true&w=majority
+      uri: mongodb+srv://23eg106c21_db_user:Wk0NnJanrSCJNdGN@lifelink.iy3cmpk.mongodb.net/hospicoDB?retryWrites=true&w=majority&maxPoolSize=10&minPoolSize=5&maxIdleTimeMS=30000
       auto-index-creation: true
+      connect-timeout: 10000
+      socket-timeout: 10000
   devtools:
     restart:
       enabled: false
