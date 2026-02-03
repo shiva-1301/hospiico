@@ -116,26 +116,47 @@ public class UserController {
         jakarta.servlet.http.HttpServletRequest request
     ) {
         try {
+            System.out.println("=== UPDATE CURRENT USER REQUEST ===");
+            System.out.println("DTO: " + dto);
+            System.out.println("Name: " + dto.getName());
+            System.out.println("Phone: " + dto.getPhone());
+            System.out.println("Age: " + dto.getAge());
+            System.out.println("Gender: " + dto.getGender());
+            
             String token = extractToken(authorizationHeader, request);
             if (token == null || token.isBlank()) {
+                System.err.println("Missing token");
                 return ResponseEntity.status(401).body("Missing token");
             }
             if (!jwtService.validateToken(token)) {
+                System.err.println("Invalid or expired token");
                 return ResponseEntity.status(401).body("Invalid or expired token");
             }
 
             String email = jwtService.extractUsername(token);
+            System.out.println("Email from token: " + email);
+            
             User user = userRepository.findByEmail(email);
             if (user == null) {
+                System.err.println("User not found for email: " + email);
                 return ResponseEntity.status(401).body("User not found");
             }
 
+            System.out.println("User found, ID: " + user.getId());
+            System.out.println("Before update - Name: " + user.getName() + ", Phone: " + user.getPhone() + ", Age: " + user.getAge() + ", Gender: " + user.getGender());
+            
             applyUserUpdates(user, dto);
+            
+            System.out.println("After updates applied - Name: " + user.getName() + ", Phone: " + user.getPhone() + ", Age: " + user.getAge() + ", Gender: " + user.getGender());
+            
             User saved = userRepository.save(user);
+            System.out.println("User saved successfully, ID: " + saved.getId());
+            
             sanitizeUser(saved);
             return ResponseEntity.ok(saved);
         } catch (Exception e) {
             System.err.println("Error updating current user: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(500).body("Error updating current user: " + e.getMessage());
         }
     }

@@ -146,24 +146,24 @@ export default function Profile() {
       }
       if (editData.newPassword) updateData.password = editData.newPassword;
 
+      console.log("Updating profile with data:", updateData);
       const updatedProfile = await apiRequest<UserProfile>("/api/users/me", "PATCH", updateData);
+      console.log("Profile updated successfully:", updatedProfile);
 
       setProfile(updatedProfile);
       setIsEditing(false);
+      setEditData({
+        name: updatedProfile.name || "",
+        phone: updatedProfile.phone || "",
+        age: updatedProfile.age ? String(updatedProfile.age) : "",
+        gender: updatedProfile.gender || "",
+        newPassword: "",
+        confirmPassword: ""
+      });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      let errorMessage = "Failed to update profile";
-      if (err.response) {
-        if (err.response.status === 400) {
-          errorMessage = "Invalid input data";
-        } else if (err.response.status === 401) {
-          errorMessage = "Session expired: Please log in again";
-        } else if (err.response.status === 403) {
-          errorMessage = "Access denied: Cannot update this profile";
-        } else if (err.response.status === 404) {
-          errorMessage = "User not found";
-        }
-      }
+      console.error("Profile update error:", err);
+      let errorMessage = err instanceof Error ? err.message : "Failed to update profile";
       setError(errorMessage);
     } finally {
       setSaving(false);

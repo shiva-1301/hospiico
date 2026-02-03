@@ -231,7 +231,8 @@ const ChatWidget = ({ autoOpen = false, embedMode = false }: ChatWidgetProps) =>
                 setMessages(prev => [...prev, { role: 'bot', content: response.reply || "I'm sorry, I couldn't process that." }]);
             }
         } catch (error) {
-            setMessages(prev => [...prev, { role: 'bot', content: "Sorry, I'm having trouble connecting to the server." }]);
+            const errMsg = error instanceof Error ? error.message : "Sorry, I'm having trouble connecting to the server.";
+            setMessages(prev => [...prev, { role: 'bot', content: errMsg }]);
         } finally {
             setIsLoading(false);
         }

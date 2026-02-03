@@ -104,7 +104,11 @@ public class AppointmentController {
             return ResponseEntity.ok("User not found");
         var appointments = appointmentRepository.findByUserId(userId);
         var responseList = appointments.stream()
-                .map(AppointmentResponseDTO::new)
+                .map(apt -> {
+                    Clinic clinic = clinicRepository.findById(apt.getClinicId()).orElse(null);
+                    var doctor = doctorRepository.findById(apt.getDoctorId()).orElse(null);
+                    return new AppointmentResponseDTO(apt, clinic, doctor, user);
+                })
                 .toList();
         return ResponseEntity.ok(responseList);
     }
@@ -116,7 +120,11 @@ public class AppointmentController {
             return ResponseEntity.ok("Clinic not found");
         var appointments = appointmentRepository.findByClinicId(clinicId);
         var responseList = appointments.stream()
-                .map(AppointmentResponseDTO::new)
+                .map(apt -> {
+                    var doctor = doctorRepository.findById(apt.getDoctorId()).orElse(null);
+                    var user = apt.getUserId() != null ? userRepository.findById(apt.getUserId()).orElse(null) : null;
+                    return new AppointmentResponseDTO(apt, clinic, doctor, user);
+                })
                 .toList();
         return ResponseEntity.ok(responseList);
     }
@@ -130,9 +138,14 @@ public class AppointmentController {
             List<Appointment> appointments = appointmentRepository.findByDoctorAndDate(doctorId, appointmentDate);
             System.out.println("Found " + appointments.size() + " appointments");
             // Filter only BOOKED appointments
+            var doctor = doctorRepository.findById(doctorId).orElse(null);
             var bookedAppointments = appointments.stream()
                     .filter(apt -> "BOOKED".equalsIgnoreCase(apt.getStatus()))
-                    .map(AppointmentResponseDTO::new)
+                    .map(apt -> {
+                        Clinic clinic = clinicRepository.findById(apt.getClinicId()).orElse(null);
+                        var user = apt.getUserId() != null ? userRepository.findById(apt.getUserId()).orElse(null) : null;
+                        return new AppointmentResponseDTO(apt, clinic, doctor, user);
+                    })
                     .toList();
             System.out.println("Returning " + bookedAppointments.size() + " booked appointments");
             return ResponseEntity.ok(bookedAppointments);

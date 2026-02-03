@@ -40,8 +40,10 @@ public class SecurityConfig {
                         .requestMatchers("/", "/api/health", "/health/**", "/actuator/**", "/actuator/health")
                         .permitAll()
                         // Auth endpoints
-                        .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/users/me").permitAll()
+                        .requestMatchers("/api/auth/signup", "/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/partner/signup").permitAll()
+                        // User profile endpoints (controller validates token)
+                        .requestMatchers("/api/users/me").permitAll()
                         // Public API endpoints (read-only)
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/clinics/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/specializations/**").permitAll()
@@ -59,7 +61,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/requests/**").permitAll()
                         // Documentation
                         .requestMatchers("/error", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                        // Protected endpoints
+                        // Protected endpoints (admin-level)
                         .requestMatchers("/api/users/**").authenticated()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

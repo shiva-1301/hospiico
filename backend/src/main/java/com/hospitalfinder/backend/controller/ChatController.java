@@ -96,6 +96,12 @@ public class ChatController {
 
     @PostMapping("/chat")
     public ResponseEntity<?> chat(@RequestBody ChatRequest request) {
+        if (apiKey == null || apiKey.isBlank()) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Collections.singletonMap("error",
+                            "Chat service is not configured. Please set the GROQ_API_KEY."));
+        }
+
         // Get the latest user message
         List<ChatRequest.Message> messages = request.getMessages();
         if (messages != null && !messages.isEmpty()) {

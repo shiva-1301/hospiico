@@ -51,7 +51,7 @@ export async function apiRequest<TResponse, TBody = unknown>(
     });
     return response.data;
   } catch (error) {
-    const err = error as AxiosError<{ message?: string } | string>;
+    const err = error as AxiosError<{ message?: string; error?: string } | string>;
 
     // More detailed error handling
     let message = "Request failed";
@@ -63,7 +63,8 @@ export async function apiRequest<TResponse, TBody = unknown>(
           // If server provided a specific message, prefer it for clarity
           const serverMsg = typeof err.response.data === 'string'
             ? err.response.data
-            : (err.response.data as { message?: string })?.message;
+            : (err.response.data as { message?: string; error?: string })?.message
+              || (err.response.data as { message?: string; error?: string })?.error;
 
           if (serverMsg) {
             const lower = serverMsg.toLowerCase();
@@ -93,7 +94,9 @@ export async function apiRequest<TResponse, TBody = unknown>(
         default:
           message = typeof err.response.data === "string"
             ? err.response.data
-            : (err.response.data as { message?: string })?.message || "Server Error";
+            : (err.response.data as { message?: string; error?: string })?.message
+              || (err.response.data as { message?: string; error?: string })?.error
+              || "Server Error";
       }
     } else if (err.request) {
       // Request was made but no response received
