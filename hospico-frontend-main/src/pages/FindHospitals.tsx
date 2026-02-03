@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { Geolocation } from '@capacitor/geolocation';
-import { Capacitor } from '@capacitor/core';
+import { Geolocation } from "@capacitor/geolocation";
+import { Capacitor } from "@capacitor/core";
 import HospitalSearch from "../components/HospitalSearch";
 import ProtectedRoute from "../components/ProtectedRoute";
 import { apiRequest } from "../api";
@@ -9,19 +9,17 @@ import { apiRequest } from "../api";
 import NearbyHospitals from "../components/NearbyHospitals";
 import HospitalCardComponent, { type Hospital as HospitalType } from "../components/HospitalCard";
 
-interface Hospital extends HospitalType { }
+interface Hospital extends HospitalType {}
 
 const FindHospitals = () => {
   const location = useLocation();
 
-  // Parse URL params on mount
   const [query, setQuery] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
   const [selectedSpecializations, setSelectedSpecializations] = useState<string[]>([]);
   const [userCoordinates, setUserCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [currentRealPosition, setCurrentRealPosition] = useState<{ lat: number; lng: number } | null>(null);
 
-  // Data states
   const [hospitals, setHospitals] = useState<Hospital[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,30 +28,26 @@ const FindHospitals = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const locParam = urlParams.get("loc");
 
-    // If location is in URL params, use it; otherwise it will be detected from geolocation
     if (locParam) {
       setSelectedLocation(decodeURIComponent(locParam));
     } else {
-      // Try to detect user's city from geolocation
       const detectLocation = async () => {
-        let coords = null;
+        let coords: { latitude: number; longitude: number } | null = null;
 
         if (Capacitor.isNativePlatform()) {
           try {
             const status = await Geolocation.checkPermissions();
-            if (status.location !== 'granted') {
+            if (status.location !== "granted") {
               await Geolocation.requestPermissions();
             }
-            // Increased timeout to 30s and enabled high accuracy for better results
             const pos = await Geolocation.getCurrentPosition({
               enableHighAccuracy: true,
               timeout: 30000,
-              maximumAge: Infinity // Accept any cached position to be faster
+              maximumAge: Infinity,
             });
             coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
           } catch (e) {
             console.error("Native location error:", e);
-            // Fallback is handled below (coords remains null)
           }
         } else if (navigator.geolocation) {
           try {
@@ -61,7 +55,9 @@ const FindHospitals = () => {
               navigator.geolocation.getCurrentPosition(resolve, reject)
             );
             coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-          } catch (e) { console.error(e); }
+          } catch (e) {
+            console.error(e);
+          }
         }
 
         if (coords) {
@@ -92,7 +88,6 @@ const FindHospitals = () => {
       detectLocation();
     }
 
-    // Always try to get real position for distance calculation
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((pos) => {
         setCurrentRealPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude });
@@ -107,7 +102,6 @@ const FindHospitals = () => {
       setSelectedSpecializations([]);
     }
 
-    // Check if we have coordinates in the URL for nearby hospitals
     const lat = urlParams.get("lat");
     const lng = urlParams.get("lng");
     if (lat && lng) {
@@ -120,32 +114,61 @@ const FindHospitals = () => {
   useEffect(() => {
     let cancelled = false;
 
-    // Fetch regular hospitals based on location and specialization filters
+    const fetchInitialHospitals = async () => {
+      setLoading(true);
+      try {
+        const data = await apiRequest<Hospital[]>("/api/clinics", "GET");
+        if (!cancelled) {
+          const sorted = (data || []).sort((a, b) => {
+            const distA = a.distanceKm ?? a.distance ?? Number.POSITIVE_INFINITY;
+            const distB = b.distanceKm ?? b.distance ?? Number.POSITIVE_INFINITY;
+            return distA - distB;
+          });
+          setHospitals(sorted);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Failed to fetch initial hospitals:", err);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    if (hospitals.length === 0) {
+      fetchInitialHospitals();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!selectedLocation && selectedSpecializations.length === 0 && !query && !userCoordinates) {
+      return;
+    }
+
     const fetchHospitals = async () => {
       setLoading(true);
       setError(null);
       try {
-        let data;
-
-        // Build query parameters
         const params = new URLSearchParams();
 
-        // Always add city filter
         if (selectedLocation) {
           params.append("city", selectedLocation);
         }
 
-        // Add specialization filters (multi-select)
         if (selectedSpecializations.length > 0) {
           selectedSpecializations.forEach((spec) => params.append("spec", spec));
         }
 
-        // Add search query if specified
         if (query) {
           params.append("search", query);
         }
 
-        // If current real position is available, always add lat/lng for distance calculation
         const effectiveLat = userCoordinates?.lat || currentRealPosition?.lat;
         const effectiveLng = userCoordinates?.lng || currentRealPosition?.lng;
 
@@ -155,14 +178,12 @@ const FindHospitals = () => {
         }
 
         const queryString = params.toString();
-        // If user coordinates (from search/nearby) are specifically requested, use distance sorting endpoint
         const url = userCoordinates
           ? `/api/clinics/sorted-by-distance${queryString ? `?${queryString}` : ""}`
           : `/api/clinics${queryString ? `?${queryString}` : ""}`;
 
-        data = await apiRequest<Hospital[]>(url, "GET");
+        const data = await apiRequest<Hospital[]>(url, "GET");
 
-        // Sort by distance in ascending order (closest first)
         const sorted = (data || []).sort((a, b) => {
           const distA = a.distanceKm ?? a.distance ?? Number.POSITIVE_INFINITY;
           const distB = b.distanceKm ?? b.distance ?? Number.POSITIVE_INFINITY;
@@ -186,16 +207,13 @@ const FindHospitals = () => {
     return () => {
       cancelled = true;
     };
-  }, [selectedLocation, selectedSpecializations, userCoordinates, query]);
+  }, [selectedLocation, selectedSpecializations, userCoordinates, query, currentRealPosition]);
 
   useEffect(() => {
     console.log("Fetched hospitals:", hospitals);
   }, [hospitals]);
 
-  // No need for client-side filtering anymore since backend handles it
   const filteredHospitals = hospitals;
-
-
 
   return (
     <ProtectedRoute>
@@ -203,7 +221,6 @@ const FindHospitals = () => {
         <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
           <HospitalSearch />
 
-          {/* Results */}
           <div className="mt-8">
             {userCoordinates && (
               <div className="mb-8">
@@ -257,14 +274,13 @@ const FindHospitals = () => {
                   <HospitalCardComponent
                     key={hospital.id || hospital.clinicId}
                     hospital={hospital}
-                    theme={document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
+                    theme={document.documentElement.classList.contains("dark") ? "dark" : "light"}
                   />
                 ))}
               </div>
             )}
           </div>
         </div>
-
       </div>
     </ProtectedRoute>
   );

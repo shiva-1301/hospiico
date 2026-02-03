@@ -1,6 +1,6 @@
 # 🏥 HOSPICO DATABASE - COMPLETE CREDENTIALS REPORT
 
-**Generated:** Sat Jan 24 03:50:29 IST 2026
+**Generated:** Tue Feb 03 14:02:17 IST 2026
 
 ---
 
@@ -306,13 +306,16 @@
 
 ## 👥 ALL USER ACCOUNTS SUMMARY
 
-### USER Users (3)
+### USER Users (6)
 
 | Name | Email | Password |
 |------|-------|----------|
 | teja | `teja@gmail.com` | `user123` |
 | Test User | `test@test.com` | `user123` |
 | sai | `sai@hospico.com` | `user123` |
+|  | `admin@gmail.com` | `user123` |
+| djr | `djr@gmail.com` | `user123` |
+|  | `admin1@gmail.com` | `user123` |
 
 ### HOSPITAL Users (11)
 
@@ -334,7 +337,7 @@
 
 | Name | Email | Password |
 |------|-------|----------|
-| Admin | `admin@hospiico.com` | `shiva` |
+| Admin | `admin@lifelink.com` | `shiva` |
 | shiva | `shiva@hospico.com` | `shiva` |
 | shiva | `shiva@gmail.com` | `shiva` |
 
@@ -371,8 +374,8 @@
 |--------|-------|
 | Total Hospitals | 10 |
 | Total Doctors | 21 |
-| Total Users | 37 |
+| Total Users | 40 |
 | Hospital Owners | 11 |
 | Doctor Accounts | 20 |
 | Admin Accounts | 3 |
-| Regular Users | 3 |
+| Regular Users | 6 |
