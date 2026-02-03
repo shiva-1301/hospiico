@@ -135,7 +135,9 @@ public class AppointmentController {
             System.out.println("Received request for doctorId: " + doctorId + ", date: " + date);
             LocalDate appointmentDate = LocalDate.parse(date);
             System.out.println("Parsed LocalDate: " + appointmentDate);
-            List<Appointment> appointments = appointmentRepository.findByDoctorAndDate(doctorId, appointmentDate);
+            LocalDateTime startOfDay = appointmentDate.atStartOfDay();
+            LocalDateTime endOfDay = appointmentDate.atTime(23, 59, 59);
+            List<Appointment> appointments = appointmentRepository.findByDoctorAndDate(doctorId, startOfDay, endOfDay);
             System.out.println("Found " + appointments.size() + " appointments");
             // Filter only BOOKED appointments
             var doctor = doctorRepository.findById(doctorId).orElse(null);

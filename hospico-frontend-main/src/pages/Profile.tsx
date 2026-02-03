@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Edit, Mail, Phone, Save, User, X } from "lucide-react";
 import { useAppDispatch, type RootState } from "../store/store";
 import { fetchUserRecords } from "../features/medicalRecords/medicalRecordsSlice";
+import { updateUser } from "../features/auth/authSlice";
 import { apiRequest } from "../api";
 
 type UserProfile = {
@@ -149,6 +150,14 @@ export default function Profile() {
       console.log("Updating profile with data:", updateData);
       const updatedProfile = await apiRequest<UserProfile>("/api/users/me", "PATCH", updateData);
       console.log("Profile updated successfully:", updatedProfile);
+
+      // Update Redux store
+      dispatch(updateUser({
+        name: updatedProfile.name,
+        phone: updatedProfile.phone,
+        age: updatedProfile.age,
+        gender: updatedProfile.gender
+      }));
 
       setProfile(updatedProfile);
       setIsEditing(false);

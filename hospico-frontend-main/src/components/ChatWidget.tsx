@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Send, Bot, User, Loader2, MapPin, Mic, MicOff, Volume2 } from 'lucide-react';
+import { MessageCircle, X, Send, Bot, User, Loader2, Mic, MicOff, Volume2 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiRequest } from '../api';
@@ -21,6 +21,22 @@ interface Message {
         confidence: string;
         disclaimer: string;
     };
+    sessionId?: string;
+    step?: string;
+    doctors?: Array<{
+        id: string;
+        name: string;
+        specialization: string;
+        qualifications: string;
+    }>;
+    availableSlots?: string[];
+    appointmentDetails?: {
+        hospital: string;
+        doctor: string;
+        date: string;
+        time: string;
+        patient?: string;
+    };
 }
 
 interface ChatWidgetProps {
@@ -34,7 +50,7 @@ const ChatWidget = ({ autoOpen = false, embedMode = false }: ChatWidgetProps) =>
     const [showAuthPrompt, setShowAuthPrompt] = useState(false);
 
     // Get auth state from Redux store
-    const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+    const { isAuthenticated, user: authUser } = useSelector((state: RootState) => state.auth);
 
     // Handle auth state changes
     useEffect(() => {
@@ -73,6 +89,8 @@ const ChatWidget = ({ autoOpen = false, embedMode = false }: ChatWidgetProps) =>
     const [isListening, setIsListening] = useState(false);
     const [speakingMessageId, setSpeakingMessageId] = useState<number | null>(null);
     const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+    const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+    const [bookingReason, setBookingReason] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<any>(null);
 
@@ -203,6 +221,8 @@ const ChatWidget = ({ autoOpen = false, embedMode = false }: ChatWidgetProps) =>
                 specializations?: string[];
                 confidence?: string;
                 disclaimer?: string;
+                sessionId?: string;
+                step?: string;
             }, any>(
                 '/api/chat',
                 'POST',
@@ -214,11 +234,18 @@ const ChatWidget = ({ autoOpen = false, embedMode = false }: ChatWidgetProps) =>
                 }
             );
 
+            // Store sessionId if provided
+            if (response.sessionId) {
+                setCurrentSessionId(response.sessionId);
+            }
+
             if (response.hospitals) {
                 setMessages(prev => [...prev, {
                     role: 'bot',
                     content: response.reply || "Based on your symptoms, here are some recommended hospitals:",
                     hospitals: response.hospitals,
+                    sessionId: response.sessionId,
+                    step: response.step,
                     symptomMatch: response.type === 'specialization_match' ? {
                         symptom: response.symptom || '',
                         inferredIssue: response.inferredIssue || '',
@@ -232,6 +259,58 @@ const ChatWidget = ({ autoOpen = false, embedMode = false }: ChatWidgetProps) =>
             }
         } catch (error) {
             const errMsg = error instanceof Error ? error.message : "Sorry, I'm having trouble connecting to the server.";
+            setMessages(prev => [...prev, { role: 'bot', content: errMsg }]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleBookingAction = async (action: string, value: string, patientData?: any) => {
+        if (!currentSessionId) {
+            console.error('No active session');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const response = await apiRequest<{
+                step: string;
+                message: string;
+                doctors?: any[];
+                availableSlots?: string[];
+                appointmentDetails?: any;
+                details?: any;
+                sessionId?: string;
+            }, any>(
+                '/api/chat/action',
+                'POST',
+                {
+                    sessionId: currentSessionId,
+                    action,
+                    value,
+                    ...patientData
+                }
+            );
+
+            // Add bot message with next step
+            setMessages(prev => [...prev, {
+                role: 'bot',
+                content: response.message,
+                step: response.step,
+                doctors: response.doctors,
+                availableSlots: response.availableSlots,
+                appointmentDetails: response.appointmentDetails || response.details,
+                sessionId: response.sessionId || currentSessionId
+            }]);
+
+            // Clear booking reason if booking confirmed
+            if (response.step === 'booking_confirmed') {
+                setBookingReason('');
+                setCurrentSessionId(null);
+            }
+
+        } catch (error) {
+            const errMsg = error instanceof Error ? error.message : "Failed to process your selection.";
             setMessages(prev => [...prev, { role: 'bot', content: errMsg }]);
         } finally {
             setIsLoading(false);
@@ -253,7 +332,7 @@ const ChatWidget = ({ autoOpen = false, embedMode = false }: ChatWidgetProps) =>
                         initial={{ opacity: 0, y: 20, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                        className={`w-full h-full sm:w-[380px] sm:h-[600px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} shadow-2xl border flex flex-col overflow-hidden pointer-events-auto`}
+                        className={`w-full h-full sm:w-[380px] sm:h-[700px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} shadow-2xl border flex flex-col overflow-hidden pointer-events-auto`}
                     >
                         {/* Header */}
                         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 flex items-center justify-between text-white shadow-md">
@@ -297,28 +376,149 @@ const ChatWidget = ({ autoOpen = false, embedMode = false }: ChatWidgetProps) =>
                                     </div>
 
                                     {/* Hospitals scroll outside bubbles for better layout */}
-                                    {msg.hospitals && msg.hospitals.length > 0 && (
+                                    {msg.hospitals && msg.hospitals.length > 0 && msg.step === 'hospital_selection' && (
                                         <div className="ml-10 mt-2 space-y-2 max-w-[calc(100%-40px)] overflow-hidden">
                                             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x w-full">
                                                 {msg.hospitals.map((h, hIdx) => (
-                                                    <div key={`${h.clinicId || h.id}-${hIdx}`} className="min-w-[240px] max-w-[240px] snap-start">
+                                                    <div key={`${h.clinicId || h.id}-${hIdx}`} className="min-w-[240px] max-w-[240px] snap-start relative group">
                                                         <SharedHospitalCard hospital={h} theme={theme} showDistance={true} />
+                                                        <button
+                                                            onClick={() => handleBookingAction('select_hospital', String(h.id || h.clinicId))}
+                                                            className="absolute inset-0 bg-blue-600/0 hover:bg-blue-600/10 transition-colors rounded-lg border-2 border-transparent hover:border-blue-500 flex items-end justify-center pb-2 opacity-0 group-hover:opacity-100"
+                                                        >
+                                                            <span className="bg-blue-600 text-white text-xs px-3 py-1 rounded-full font-semibold shadow-lg">
+                                                                Select Hospital
+                                                            </span>
+                                                        </button>
                                                     </div>
                                                 ))}
                                             </div>
-
-                                            {/* Map Link */}
-                                            <a
-                                                href={`https://www.google.com/maps/search/hospitals+near+${msg.hospitals[0].latitude},${msg.hospitals[0].longitude}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-bold rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors border border-blue-200/50 dark:border-blue-800/50"
-                                            >
-                                                <MapPin size={12} />
-                                                VIEW ALL ON GOOGLE MAPS
-                                            </a>
                                         </div>
                                     )}
+
+                                    {/* Doctor Selection */}
+                                    {msg.doctors && msg.doctors.length > 0 && msg.step === 'doctor_selection' && (
+                                        <div className="ml-10 mt-2 space-y-2 max-w-[calc(100%-40px)]">
+                                            {msg.doctors.map((doctor) => (
+                                                <button
+                                                    key={doctor.id}
+                                                    onClick={() => handleBookingAction('select_doctor', doctor.id)}
+                                                    className={`w-full text-left p-3 rounded-lg border-2 transition-all ${theme === 'dark' ? 'bg-gray-800 border-gray-700 hover:border-blue-500 hover:bg-gray-750' : 'bg-white border-gray-200 hover:border-blue-500 hover:bg-blue-50'}`}
+                                                >
+                                                    <div className="font-semibold text-sm">{doctor.name}</div>
+                                                    <div className="text-xs text-gray-500 mt-1">{doctor.specialization}</div>
+                                                    {doctor.qualifications && (
+                                                        <div className="text-[10px] text-gray-400 mt-0.5">{doctor.qualifications}</div>
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Date Selection */}
+                                    {msg.step === 'date_selection' && (
+                                        <div className="ml-10 mt-2 max-w-[calc(100%-40px)]">
+                                            <input
+                                                type="date"
+                                                min={new Date().toISOString().split('T')[0]}
+                                                onChange={(e) => {
+                                                    if (e.target.value) {
+                                                        handleBookingAction('select_date', e.target.value);
+                                                    }
+                                                }}
+                                                className={`w-full p-3 rounded-lg border-2 text-sm ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-300'}`}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Time Slot Selection */}
+                                    {msg.availableSlots && msg.availableSlots.length > 0 && msg.step === 'time_selection' && (
+                                        <div className="ml-10 mt-2 max-w-[calc(100%-40px)]">
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {msg.availableSlots.map((slot) => (
+                                                    <button
+                                                        key={slot}
+                                                        onClick={() => handleBookingAction('select_time', slot)}
+                                                        className={`p-2 rounded-lg text-xs font-medium transition-all ${theme === 'dark' ? 'bg-gray-800 border border-gray-700 hover:bg-blue-600 hover:border-blue-500' : 'bg-white border border-gray-300 hover:bg-blue-600 hover:text-white'}`}
+                                                    >
+                                                        {slot}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Patient Details Form */}
+                                    {msg.step === 'patient_details' && msg.appointmentDetails && authUser && (
+                                        <div className="ml-10 mt-2 max-w-[calc(100%-40px)] space-y-2">
+                                            <div className={`p-3 rounded-lg text-xs ${theme === 'dark' ? 'bg-gray-800' : 'bg-blue-50'}`}>
+                                                <div><strong>Hospital:</strong> {msg.appointmentDetails.hospital}</div>
+                                                <div><strong>Doctor:</strong> {msg.appointmentDetails.doctor}</div>
+                                                <div><strong>Date:</strong> {msg.appointmentDetails.date}</div>
+                                                <div><strong>Time:</strong> {msg.appointmentDetails.time}</div>
+                                            </div>
+                                            
+                                            {/* Display profile data */}
+                                            <div className={`p-3 rounded-lg text-xs ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-50'}`}>
+                                                <div className="font-semibold mb-2">Your Information:</div>
+                                                <div><strong>Name:</strong> {authUser.name || 'Not set'}</div>
+                                                <div><strong>Age:</strong> {authUser.age || 'Not set'}</div>
+                                                <div><strong>Gender:</strong> {authUser.gender || 'Not set'}</div>
+                                                <div><strong>Phone:</strong> {authUser.phone || 'Not set'}</div>
+                                                <div><strong>Email:</strong> {authUser.email}</div>
+                                            </div>
+                                            
+                                            {/* Only ask for reason */}
+                                            <textarea
+                                                placeholder="Reason for visit / Additional notes (optional)"
+                                                value={bookingReason}
+                                                onChange={(e) => setBookingReason(e.target.value)}
+                                                className={`w-full p-2 rounded text-sm ${theme === 'dark' ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-300'} border`}
+                                                rows={3}
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    if (!authUser.name || !authUser.age || !authUser.gender || !authUser.phone) {
+                                                        alert('Please complete your profile information first. Go to Profile page to update your details.');
+                                                        return;
+                                                    }
+                                                    handleBookingAction('confirm_booking', authUser.id, {
+                                                        patientName: authUser.name,
+                                                        patientAge: authUser.age,
+                                                        patientGender: authUser.gender,
+                                                        patientPhone: authUser.phone,
+                                                        patientEmail: authUser.email,
+                                                        reason: bookingReason || 'General consultation'
+                                                    });
+                                                }}
+                                                className="w-full p-2 rounded bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
+                                            >
+                                                Confirm Booking
+                                            </button>
+                                            {(!authUser.name || !authUser.age || !authUser.gender || !authUser.phone) && (
+                                                <p className="text-xs text-red-500 text-center">
+                                                    Please update your profile details. <Link to="/profile" className="text-blue-500 hover:underline">Go to Profile</Link>
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Booking Confirmed */}
+                                    {msg.step === 'booking_confirmed' && msg.appointmentDetails && (
+                                        <div className="ml-10 mt-2 max-w-[calc(100%-40px)]">
+                                            <div className={`p-4 rounded-lg ${theme === 'dark' ? 'bg-green-900/30 border-green-700' : 'bg-green-50 border-green-200'} border-2`}>
+                                                <div className="text-green-700 dark:text-green-300 font-bold mb-2">✅ Booking Confirmed!</div>
+                                                <div className="text-xs space-y-1">
+                                                    <div><strong>Hospital:</strong> {msg.appointmentDetails.hospital}</div>
+                                                    <div><strong>Doctor:</strong> {msg.appointmentDetails.doctor}</div>
+                                                    <div><strong>Date:</strong> {msg.appointmentDetails.date}</div>
+                                                    <div><strong>Time:</strong> {msg.appointmentDetails.time}</div>
+                                                    <div><strong>Patient:</strong> {msg.appointmentDetails.patient}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {(msg.role === 'bot' || msg.role === 'system') && (
                                         <button onClick={() => speakMessage(msg.content, idx)} className="ml-10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
                                             <Volume2 size={14} className={speakingMessageId === idx ? 'text-indigo-500 animate-pulse' : ''} />

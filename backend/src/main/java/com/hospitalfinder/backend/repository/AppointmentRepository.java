@@ -21,6 +21,6 @@ public interface AppointmentRepository extends MongoRepository<Appointment, Stri
     boolean existsByDoctorIdAndAppointmentTime(String doctorId, LocalDateTime appointmentTime);
 
     // get all booked slots of a doctor for a date
-    @Query("{ 'doctorId': ?0, 'appointmentTime': { $gte: ?1T00:00:00, $lt: ?1T23:59:59 } }")
-    List<Appointment> findByDoctorAndDate(String doctorId, LocalDate date);
+    @Query("{ 'doctorId': ?0, 'appointmentTime': { $gte: ?1, $lt: ?2 } }")
+    List<Appointment> findByDoctorAndDate(String doctorId, LocalDateTime startOfDay, LocalDateTime endOfDay);
 }

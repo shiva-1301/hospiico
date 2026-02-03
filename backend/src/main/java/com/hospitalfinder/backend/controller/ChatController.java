@@ -1,8 +1,15 @@
 package com.hospitalfinder.backend.controller;
 
 import com.hospitalfinder.backend.dto.ChatRequest;
+import com.hospitalfinder.backend.dto.ChatActionRequest;
 import com.hospitalfinder.backend.entity.Clinic;
+import com.hospitalfinder.backend.entity.ChatSession;
+import com.hospitalfinder.backend.entity.Doctor;
+import com.hospitalfinder.backend.entity.Appointment;
 import com.hospitalfinder.backend.repository.ClinicRepository;
+import com.hospitalfinder.backend.repository.ChatSessionRepository;
+import com.hospitalfinder.backend.repository.DoctorRepository;
+import com.hospitalfinder.backend.repository.AppointmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -13,6 +20,9 @@ import org.springframework.web.client.HttpClientErrorException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.*;
 import java.util.stream.Collectors;
@@ -27,6 +37,15 @@ public class ChatController {
 
     @Autowired
     private ClinicRepository clinicRepository;
+    
+    @Autowired
+    private ChatSessionRepository chatSessionRepository;
+    
+    @Autowired
+    private DoctorRepository doctorRepository;
+    
+    @Autowired
+    private AppointmentRepository appointmentRepository;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -341,6 +360,20 @@ public class ChatController {
             result.put("hospitals", hospitalList);
             result.put("reply", buildSymptomReplyMessage(parsed, sortedClinics.size()));
 
+            // Create or update chat session for booking flow
+            ChatSession session = new ChatSession();
+            session.setSessionId(UUID.randomUUID().toString());
+            session.setSymptom((String) parsed.get("symptom"));
+            session.setSpecialization(normalizedSpecs.get(0)); // Use primary specialization
+            session.setCurrentStep("hospital_selection");
+            session.setCreatedAt(LocalDateTime.now());
+            session.setUpdatedAt(LocalDateTime.now());
+            session.setExpiresAt(LocalDateTime.now().plusMinutes(30));
+            chatSessionRepository.save(session);
+            
+            result.put("sessionId", session.getSessionId());
+            result.put("step", "hospital_selection");
+
             return ResponseEntity.ok(result);
 
         } catch (Exception e) {
@@ -611,5 +644,299 @@ public class ChatController {
         response.put("hospitals", hospitalList);
         response.put("reply", "Here are the hospitals closest to your location:");
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * NEW: Handle step-by-step booking actions from chatbot
+     */
+    @PostMapping("/chat/action")
+    public ResponseEntity<?> handleChatAction(@RequestBody ChatActionRequest request) {
+        try {
+            System.out.println("Chat action received: " + request.getAction() + " with value: " + request.getValue());
+            
+            // Get or create session
+            ChatSession session = chatSessionRepository.findBySessionId(request.getSessionId())
+                    .orElseGet(() -> {
+                        ChatSession newSession = new ChatSession();
+                        newSession.setSessionId(request.getSessionId());
+                        newSession.setCreatedAt(LocalDateTime.now());
+                        newSession.setExpiresAt(LocalDateTime.now().plusMinutes(30));
+                        newSession.setCurrentStep("symptom_classification");
+                        return newSession;
+                    });
+
+            // Handle actions based on currentStep and action type
+            switch (request.getAction()) {
+                case "select_hospital":
+                    return handleHospitalSelection(session, request.getValue());
+                    
+                case "select_doctor":
+                    return handleDoctorSelection(session, request.getValue());
+                    
+                case "select_date":
+                    return handleDateSelection(session, request.getValue());
+                    
+                case "select_time":
+                    return handleTimeSelection(session, request.getValue());
+                    
+                case "confirm_booking":
+                    return handleBookingConfirmation(session, request);
+                    
+                default:
+                    return ResponseEntity.badRequest().body(
+                        Collections.singletonMap("error", "Unknown action: " + request.getAction())
+                    );
+            }
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(
+                Collections.singletonMap("error", "Failed to process action: " + e.getMessage())
+            );
+        }
+    }
+
+    private ResponseEntity<?> handleHospitalSelection(ChatSession session, String clinicId) {
+        Clinic clinic = clinicRepository.findById(clinicId).orElse(null);
+        if (clinic == null) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Hospital not found"));
+        }
+
+        session.setClinicId(clinicId);
+        session.setClinicName(clinic.getName());
+        session.setCurrentStep("doctor_selection");
+        session.setUpdatedAt(LocalDateTime.now());
+        chatSessionRepository.save(session);
+
+        // Fetch doctors for this hospital with the required specialization
+        List<Doctor> doctors = doctorRepository.findByClinicId(clinicId);
+        
+        // Filter by specialization if available
+        if (session.getSpecialization() != null && !session.getSpecialization().isEmpty()) {
+            doctors = doctors.stream()
+                    .filter(d -> d.getSpecialization() != null && 
+                            d.getSpecialization().equalsIgnoreCase(session.getSpecialization()))
+                    .collect(Collectors.toList());
+        }
+
+        // Build doctor list
+        List<Map<String, Object>> doctorList = new ArrayList<>();
+        for (Doctor doctor : doctors) {
+            Map<String, Object> doctorInfo = new HashMap<>();
+            doctorInfo.put("id", doctor.getId());
+            doctorInfo.put("name", doctor.getName());
+            doctorInfo.put("specialization", doctor.getSpecialization());
+            doctorInfo.put("qualifications", doctor.getQualifications());
+            doctorInfo.put("experience", doctor.getExperience());
+            doctorList.add(doctorInfo);
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("step", "doctor_selection");
+        response.put("message", "Great! Please select a doctor from " + clinic.getName());
+        response.put("doctors", doctorList);
+        response.put("sessionId", session.getSessionId());
+        
+        return ResponseEntity.ok(response);
+    }
+
+    private ResponseEntity<?> handleDoctorSelection(ChatSession session, String doctorId) {
+        Doctor doctor = doctorRepository.findById(doctorId).orElse(null);
+        if (doctor == null) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("error", "Doctor not found"));
+        }
+
+        session.setDoctorId(doctorId);
+        session.setDoctorName(doctor.getName());
+        session.setCurrentStep("date_selection");
+        session.setUpdatedAt(LocalDateTime.now());
+        chatSessionRepository.save(session);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("step", "date_selection");
+        response.put("message", "When would you like to book an appointment with Dr. " + doctor.getName() + "?");
+        response.put("sessionId", session.getSessionId());
+        
+        return ResponseEntity.ok(response);
+    }
+
+    private ResponseEntity<?> handleDateSelection(ChatSession session, String date) {
+        try {
+            // Validate date format (YYYY-MM-DD)
+            LocalDate selectedDate = LocalDate.parse(date, DateTimeFormatter.ISO_LOCAL_DATE);
+            
+            // Check if date is in the past
+            if (selectedDate.isBefore(LocalDate.now())) {
+                return ResponseEntity.badRequest().body(
+                    Collections.singletonMap("error", "Cannot book appointments in the past")
+                );
+            }
+
+            session.setSelectedDate(date);
+            session.setCurrentStep("time_selection");
+            session.setUpdatedAt(LocalDateTime.now());
+            chatSessionRepository.save(session);
+
+            // Fetch booked appointments for this doctor on this date
+            LocalDateTime startOfDay = selectedDate.atStartOfDay();
+            LocalDateTime endOfDay = selectedDate.atTime(23, 59, 59);
+            List<Appointment> bookedAppointments = appointmentRepository.findByDoctorAndDate(
+                session.getDoctorId(), startOfDay, endOfDay
+            );
+
+            Set<String> bookedTimes = bookedAppointments.stream()
+                    .filter(apt -> "BOOKED".equalsIgnoreCase(apt.getStatus()))
+                    .map(apt -> apt.getAppointmentTime().toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm")))
+                    .collect(Collectors.toSet());
+
+            // Generate available time slots
+            List<String> availableSlots = generateTimeSlots(selectedDate, bookedTimes);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("step", "time_selection");
+            response.put("message", "Please select a time slot:");
+            response.put("availableSlots", availableSlots);
+            response.put("sessionId", session.getSessionId());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(
+                Collections.singletonMap("error", "Invalid date format. Please use YYYY-MM-DD")
+            );
+        }
+    }
+
+    private ResponseEntity<?> handleTimeSelection(ChatSession session, String time) {
+        session.setSelectedTime(time);
+        session.setCurrentStep("patient_details");
+        session.setUpdatedAt(LocalDateTime.now());
+        chatSessionRepository.save(session);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("step", "patient_details");
+        response.put("message", "Please provide patient details to confirm the booking:");
+        response.put("sessionId", session.getSessionId());
+        response.put("appointmentDetails", Map.of(
+            "hospital", session.getClinicName(),
+            "doctor", session.getDoctorName(),
+            "date", session.getSelectedDate(),
+            "time", session.getSelectedTime()
+        ));
+        
+        return ResponseEntity.ok(response);
+    }
+
+    private ResponseEntity<?> handleBookingConfirmation(ChatSession session, ChatActionRequest request) {
+        try {
+            // Validate all required fields
+            if (session.getClinicId() == null || session.getDoctorId() == null || 
+                session.getSelectedDate() == null || session.getSelectedTime() == null) {
+                return ResponseEntity.badRequest().body(
+                    Collections.singletonMap("error", "Incomplete booking information")
+                );
+            }
+
+            // Create appointment
+            Appointment appointment = new Appointment();
+            appointment.setUserId(request.getValue()); // userId if logged in
+            appointment.setClinicId(session.getClinicId());
+            appointment.setDoctorId(session.getDoctorId());
+            
+            LocalDateTime appointmentTime = LocalDateTime.of(
+                LocalDate.parse(session.getSelectedDate()),
+                java.time.LocalTime.parse(session.getSelectedTime())
+            );
+            appointment.setAppointmentTime(appointmentTime);
+            appointment.setStatus("BOOKED");
+            
+            // Set patient details
+            appointment.setPatientName(request.getPatientName());
+            appointment.setPatientAge(request.getPatientAge());
+            appointment.setPatientGender(request.getPatientGender());
+            appointment.setPatientPhone(request.getPatientPhone());
+            appointment.setPatientEmail(request.getPatientEmail());
+            appointment.setReason(request.getReason());
+
+            // Check for double booking
+            if (appointmentRepository.existsByDoctorIdAndAppointmentTime(
+                    session.getDoctorId(), appointmentTime)) {
+                return ResponseEntity.badRequest().body(
+                    Collections.singletonMap("error", "This time slot has just been booked. Please select another time.")
+                );
+            }
+
+            appointment = appointmentRepository.save(appointment);
+
+            // Update session
+            session.setCurrentStep("booking_confirmed");
+            session.setUpdatedAt(LocalDateTime.now());
+            chatSessionRepository.save(session);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("step", "booking_confirmed");
+            response.put("message", "✅ Appointment booked successfully!");
+            response.put("appointmentId", appointment.getId());
+            response.put("details", Map.of(
+                "hospital", session.getClinicName(),
+                "doctor", session.getDoctorName(),
+                "date", session.getSelectedDate(),
+                "time", session.getSelectedTime(),
+                "patient", request.getPatientName()
+            ));
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(
+                Collections.singletonMap("error", "Failed to create appointment: " + e.getMessage())
+            );
+        }
+    }
+
+    private List<String> generateTimeSlots(LocalDate selectedDate, Set<String> bookedTimes) {
+        List<String> slots = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        boolean isToday = selectedDate.equals(today);
+        int currentHour = isToday ? LocalDateTime.now().getHour() : 0;
+        int currentMinute = isToday ? LocalDateTime.now().getMinute() : 0;
+        
+        boolean isSunday = selectedDate.getDayOfWeek().getValue() == 7;
+        
+        // Morning slots: 9:00 AM - 1:00 PM
+        for (int hour = 9; hour <= 13; hour++) {
+            for (int minute = 0; minute < 60; minute += 30) {
+                if (hour == 13 && minute > 0) break;
+                
+                if (isToday && (hour < currentHour || (hour == currentHour && minute <= currentMinute))) {
+                    continue;
+                }
+                
+                String timeSlot = String.format("%02d:%02d", hour, minute);
+                if (!bookedTimes.contains(timeSlot)) {
+                    slots.add(timeSlot);
+                }
+            }
+        }
+        
+        // Afternoon slots: 2:00 PM - 8:00 PM (6:00 PM on Sunday)
+        int afternoonEnd = isSunday ? 18 : 20;
+        for (int hour = 14; hour <= afternoonEnd; hour++) {
+            for (int minute = 0; minute < 60; minute += 30) {
+                if (hour == afternoonEnd && minute > 0) break;
+                
+                if (isToday && (hour < currentHour || (hour == currentHour && minute <= currentMinute))) {
+                    continue;
+                }
+                
+                String timeSlot = String.format("%02d:%02d", hour, minute);
+                if (!bookedTimes.contains(timeSlot)) {
+                    slots.add(timeSlot);
+                }
+            }
+        }
+        
+        return slots;
     }
 }

@@ -112,6 +112,11 @@ const authSlice = createSlice({
       state.initialized = true;
       localStorage.setItem("jwt_token", token);
     },
+    updateUser: (state, action: PayloadAction<Partial<AuthUser>>) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+      }
+    },
   },
   extraReducers: (builder) => {
     // LOGIN
@@ -188,5 +193,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, initializeAuth, clearError, setCredentials } = authSlice.actions;
+export const { logout, initializeAuth, clearError, setCredentials, updateUser } = authSlice.actions;
 export default authSlice.reducer;
