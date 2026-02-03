@@ -47,7 +47,9 @@ public class SecurityConfig {
                         // Public API endpoints (read-only)
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/clinics/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/specializations/**").permitAll()
+                        // Chat endpoints - permit all for chatbot conversations and booking workflow
                         .requestMatchers("/api/chat").permitAll()
+                        .requestMatchers("/api/chat/action").permitAll()
                         // Clinic modifications require authentication
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/clinics").authenticated()
                         .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/clinics/**").authenticated()
@@ -56,8 +58,14 @@ public class SecurityConfig {
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/clinics/*/doctors")
                         .authenticated()
                         .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/doctors/**").authenticated()
-                        // Appointment endpoints
-                        .requestMatchers("/api/appointments/**").authenticated()
+                        // Appointment endpoints - permit for chat booking workflow (will be validated in controller)
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/appointments/user/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/appointments").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/api/appointments/**").authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/api/appointments/**").authenticated()
+                        // Medical records endpoints - permit for chat workflow
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/medical-records/user/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/medical-records").permitAll()
                         .requestMatchers("/api/requests/**").permitAll()
                         // Documentation
                         .requestMatchers("/error", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()

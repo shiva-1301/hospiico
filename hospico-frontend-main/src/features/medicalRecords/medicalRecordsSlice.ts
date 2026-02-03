@@ -41,6 +41,11 @@ export const fetchUserRecords = createAsyncThunk(
     'medicalRecords/fetchUserRecords',
     async (userId: number, { rejectWithValue }) => {
         try {
+            // Prevent fetching with invalid userId (NaN, null, undefined)
+            if (!userId || isNaN(userId)) {
+                return rejectWithValue('Invalid user ID - user not authenticated');
+            }
+
             // API returns list of records without file data
             // Using generic type for apiRequest if possible, else casting
             const records = await apiRequest<MedFile[]>(`/api/medical-records/user/${userId}`);
