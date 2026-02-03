@@ -91,7 +91,7 @@ export default function Footer() {
             <div className="bg-white/10 p-2 rounded-lg">
               <Building2 className="h-6 w-6 text-white" />
             </div>
-            <span className="text-xl font-bold">LifeLink</span>
+            <span className="text-xl font-bold">Hospiico</span>
           </Link>
           <p className="text-blue-100 max-w-md">
             Revolutionizing healthcare accessibility by connecting patients with
@@ -158,7 +158,7 @@ export default function Footer() {
 
         {/* Copyright */}
         <div className="text-center mt-8 text-sm text-blue-100">
-          <p>&copy; {new Date().getFullYear()} LifeLink. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Hospiico. All rights reserved.</p>
         </div>
       </div>
     </footer >

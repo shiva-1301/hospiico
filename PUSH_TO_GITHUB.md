@@ -1,24 +1,24 @@
-# 🚀 Push LifeLink to GitHub
+# 🚀 Push Hospiico to GitHub
 
 ## ✅ Rebranding Complete!
 
-Your project has been rebranded from **Hospico** to **LifeLink** and is ready for a fresh GitHub push!
+Your project has been rebranded from **Hospico** to **Hospiico** and is ready for a fresh GitHub push!
 
 ---
 
 ## 📝 What Changed
 
 ### Frontend Branding
-- ✅ **index.html** - Page title updated to "LifeLink - Healthcare Simplified"
-- ✅ **package.json** - Package name: `lifelink-frontend`
-- ✅ **capacitor.config.ts** - App ID: `com.lifelink.app`, App Name: `LifeLink`
-- ✅ **Navbar.tsx** - Brand display: "Life**Link**" (styled)
+- ✅ **index.html** - Page title updated to "Hospiico - Healthcare Simplified"
+- ✅ **package.json** - Package name: `hospiico-frontend`
+- ✅ **capacitor.config.ts** - App ID: `com.hospiico.app`, App Name: `Hospiico`
+- ✅ **Navbar.tsx** - Brand display: "Hos**piico**" (styled)
 - ✅ **Footer.tsx** - Brand name and copyright updated
 - ✅ **CTASection.tsx** - Marketing copy updated
 - ✅ **App.tsx** - All page titles updated
 
 ### Backend Changes
-- ✅ **MongoDbConfig.java** - Admin email: `admin@lifelink.com`
+- ✅ **MongoDbConfig.java** - Admin email: `admin@hospiico.com`
 
 ### Git Cleanup
 - ✅ `.git` folder **removed** - Fresh repository ready
@@ -29,7 +29,7 @@ Your project has been rebranded from **Hospico** to **LifeLink** and is ready fo
 ## 🔐 New Admin Credentials
 
 ```
-Email:    admin@lifelink.com
+Email:    admin@hospiico.com
 Password: admin@123
 ```
 
@@ -50,20 +50,20 @@ git add .
 
 ### 3️⃣ Create Initial Commit
 ```bash
-git commit -m "Initial commit - LifeLink Healthcare Platform"
+git commit -m "Initial commit - Hospiico Healthcare Platform"
 ```
 
 ### 4️⃣ Create GitHub Repository
 1. Go to https://github.com/new
-2. Repository name: `lifelink` or `lifelink-healthcare`
-3. Description: "LifeLink - Healthcare accessibility platform connecting patients with healthcare providers"
+2. Repository name: `hospiico` or `hospiico-healthcare`
+3. Description: "Hospiico - Healthcare accessibility platform connecting patients with healthcare providers"
 4. Select: **Public** or **Private**
 5. **DO NOT** initialize with README (you already have one)
 6. Click **Create repository**
 
 ### 5️⃣ Link to GitHub
 ```bash
-git remote add origin https://github.com/YOUR_USERNAME/lifelink.git
+git remote add origin https://github.com/YOUR_USERNAME/hospiico.git
 ```
 Replace `YOUR_USERNAME` with your actual GitHub username.
 
@@ -78,7 +78,7 @@ git push -u origin main
 ## 📂 Repository Structure
 
 ```
-LifeLink/
+Hospiico/
 ├── backend/                    # Spring Boot backend
 │   ├── src/
 │   ├── pom.xml
@@ -97,11 +97,11 @@ LifeLink/
 ## 🎯 Recommended GitHub Repository Settings
 
 ### Repository Name
-- `lifelink` or `lifelink-healthcare`
+- `hospiico` or `hospiico-healthcare`
 
 ### Description
 ```
-LifeLink - Modern healthcare platform connecting patients with hospitals, doctors, and medical services. Built with React, Spring Boot, and MongoDB.
+Hospiico - Modern healthcare platform connecting patients with hospitals, doctors, and medical services. Built with React, Spring Boot, and MongoDB.
 ```
 
 ### Topics (Add these tags)
@@ -158,7 +158,7 @@ Add to your README.md:
 Add this to the top of your README.md:
 
 ```markdown
-# 🏥 LifeLink - Healthcare Accessibility Platform
+# 🏥 Hospiico - Healthcare Accessibility Platform
 
 > Modern healthcare platform connecting patients with hospitals, doctors, and medical services.
 
@@ -193,7 +193,7 @@ See [QUICKSTART.md](QUICKSTART.md) for detailed setup instructions.
 ## 🔐 Default Admin Login
 
 ```
-Email: admin@lifelink.com
+Email: admin@hospiico.com
 Password: admin@123
 ```
 
@@ -226,7 +226,7 @@ After pushing:
 
 ## 🎉 You're Ready!
 
-Your **LifeLink** project is now:
+Your **Hospiico** project is now:
 - ✅ Fully rebranded
 - ✅ Git history cleaned
 - ✅ Ready for GitHub

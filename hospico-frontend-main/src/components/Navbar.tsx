@@ -67,13 +67,13 @@ export default function Navbar() {
           <Link to="/" className="flex items-center gap-1.5">
             <img
               src={logo}
-              alt="LifeLink Logo"
+              alt="Hospiico Logo"
               className="w-auto object-contain"
               style={{ height: '40px', maxHeight: '40px' }}
             />
             <span className="text-3xl font-bold tracking-tight flex items-center pb-1">
-              <span className="text-slate-800 dark:text-slate-100">Life</span>
-              <span className="text-blue-500">Link</span>
+              <span className="text-slate-800 dark:text-slate-100">Hos</span>
+              <span className="text-blue-500">piico</span>
             </span>
           </Link>
 

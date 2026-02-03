@@ -334,7 +334,7 @@
 
 | Name | Email | Password |
 |------|-------|----------|
-| Admin | `admin@lifelink.com` | `shiva` |
+| Admin | `admin@hospiico.com` | `shiva` |
 | shiva | `shiva@hospico.com` | `shiva` |
 | shiva | `shiva@gmail.com` | `shiva` |
 

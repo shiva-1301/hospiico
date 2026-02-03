@@ -37,24 +37,24 @@ function App() {
     useEffect(() => {
       const path = location.pathname;
       const titleMap: { [key: string]: string } = {
-        '/': 'Dashboard - LifeLink',
-        '/dashboard': 'Dashboard - LifeLink',
-        '/find-hospitals': 'Find Hospitals - LifeLink',
-        '/hospitals': 'Find Hospitals - LifeLink',
-        '/emergency': 'Emergency - LifeLink',
-        '/login': 'Login - LifeLink',
-        '/signup': 'Sign Up - LifeLink',
-        '/partner-login': 'Partner Login - LifeLink',
-        '/profile': 'My Profile - LifeLink',
-        '/my-appointments': 'My Appointments - LifeLink',
-        '/resources': 'Resources - LifeLink',
+        '/': 'Dashboard - Hospiico',
+        '/dashboard': 'Dashboard - Hospiico',
+        '/find-hospitals': 'Find Hospitals - Hospiico',
+        '/hospitals': 'Find Hospitals - Hospiico',
+        '/emergency': 'Emergency - Hospiico',
+        '/login': 'Login - Hospiico',
+        '/signup': 'Sign Up - Hospiico',
+        '/partner-login': 'Partner Login - Hospiico',
+        '/profile': 'My Profile - Hospiico',
+        '/my-appointments': 'My Appointments - Hospiico',
+        '/resources': 'Resources - Hospiico',
       };
 
       // dynamic routes handling
       let title = titleMap[path];
       if (!title) {
-        if (path.startsWith('/find-hospital')) title = 'Hospital Profile - LifeLink';
-        else title = 'LifeLink';
+        if (path.startsWith('/find-hospital')) title = 'Hospital Profile - Hospiico';
+        else title = 'Hospiico';
       }
 
       document.title = title;

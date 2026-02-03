@@ -1,11 +1,11 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-    appId: 'com.lifelink.app',
-    appName: 'LifeLink',
+    appId: 'com.hospiico.app',
+    appName: 'Hospiico',
     webDir: 'dist'
     // server: {
-    //     url: 'https://lifelink.onrender.com', // Commented out to enable Offline Screen
+    //     url: 'https://hospiico.onrender.com', // Commented out to enable Offline Screen
     //     cleartext: true
     // }
 };
