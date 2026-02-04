@@ -524,6 +524,7 @@ public class ChatController {
         response.put("type", "hospitals");
         response.put("hospitals", hospitalList);
         response.put("reply", "Found " + limitedClinics.size() + " hospital(s) in " + placeName + ":");
+        response.put("step", "hospital_selection");
         return ResponseEntity.ok(response);
     }
 
@@ -643,6 +644,7 @@ public class ChatController {
         response.put("type", "hospitals");
         response.put("hospitals", hospitalList);
         response.put("reply", "Here are the hospitals closest to your location:");
+        response.put("step", "hospital_selection");
         return ResponseEntity.ok(response);
     }
 
