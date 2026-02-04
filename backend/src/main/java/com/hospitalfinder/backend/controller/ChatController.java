@@ -6,6 +6,7 @@ import com.hospitalfinder.backend.entity.Clinic;
 import com.hospitalfinder.backend.entity.ChatSession;
 import com.hospitalfinder.backend.entity.Doctor;
 import com.hospitalfinder.backend.entity.Appointment;
+import com.hospitalfinder.backend.entity.Specialization;
 import com.hospitalfinder.backend.repository.ClinicRepository;
 import com.hospitalfinder.backend.repository.ChatSessionRepository;
 import com.hospitalfinder.backend.repository.DoctorRepository;
@@ -150,11 +151,31 @@ public class ChatController {
             }
         }
 
+        // Get latest message
+        String latestMessage = messages != null && !messages.isEmpty() 
+                ? messages.get(messages.size() - 1).getContent() 
+                : "";
+        String lowerMessage = latestMessage.toLowerCase();
+
+        // Check if user is responding to symptom explanation (wants hospitals or appointment)
+        boolean wantsHospitals = lowerMessage.contains("show") || lowerMessage.contains("hospitals") || 
+                                lowerMessage.contains("nearby") || lowerMessage.contains("find hospital");
+        boolean wantsAppointment = lowerMessage.contains("book") || lowerMessage.contains("appointment") ||
+                                  lowerMessage.contains("see a doctor") || lowerMessage.contains("doctor");
+        
+        if (wantsHospitals || wantsAppointment) {
+            // Check if there's a recent session with symptom data
+            Optional<ChatSession> recentSession = chatSessionRepository
+                .findFirstByOrderByCreatedAtDesc();
+            
+            if (recentSession.isPresent() && recentSession.get().getSymptom() != null) {
+                ChatSession session = recentSession.get();
+                return showHospitalsFromSession(session, request.getLatitude(), request.getLongitude());
+            }
+        }
+
         // Check if message contains symptom keywords
-        boolean containsSymptoms = containsSymptomKeywords(
-                messages != null && !messages.isEmpty()
-                        ? messages.get(messages.size() - 1).getContent()
-                        : "");
+        boolean containsSymptoms = containsSymptomKeywords(latestMessage);
 
         // Proceed with AI chat
         String url = "https://api.groq.com/openai/v1/chat/completions";
@@ -357,22 +378,27 @@ public class ChatController {
             result.put("disclaimer", parsed.get("disclaimer") != null
                     ? parsed.get("disclaimer")
                     : "This is not a medical diagnosis. Please consult a qualified doctor.");
-            result.put("hospitals", hospitalList);
-            result.put("reply", buildSymptomReplyMessage(parsed, sortedClinics.size()));
+            // Build explanation message with causes
+            String explanation = buildSymptomExplanation(parsed);
+            
+            result.put("reply", explanation);
+            result.put("type", "symptom_explanation");
+            result.put("step", "symptom_explanation");
 
-            // Create or update chat session for booking flow
+            // Store data in session for when user chooses
             ChatSession session = new ChatSession();
             session.setSessionId(UUID.randomUUID().toString());
             session.setSymptom((String) parsed.get("symptom"));
             session.setSpecialization(normalizedSpecs.get(0)); // Use primary specialization
-            session.setCurrentStep("hospital_selection");
+            session.setCurrentStep("symptom_explanation");
             session.setCreatedAt(LocalDateTime.now());
             session.setUpdatedAt(LocalDateTime.now());
             session.setExpiresAt(LocalDateTime.now().plusMinutes(30));
             chatSessionRepository.save(session);
             
             result.put("sessionId", session.getSessionId());
-            result.put("step", "hospital_selection");
+            result.put("specialty", String.join(", ", normalizedSpecs));
+            result.put("hospitalCount", sortedClinics.size());
 
             return ResponseEntity.ok(result);
 
@@ -380,6 +406,115 @@ public class ChatController {
             System.err.println("Failed to parse symptom JSON: " + e.getMessage());
             // Fall back to normal text response
             return returnAsNormalText(aiResponse);
+        }
+    }
+
+    /**
+     * Build symptom explanation with possible causes
+     */
+    private String buildSymptomExplanation(Map<String, Object> parsed) {
+        String symptom = (String) parsed.get("symptom");
+        String condition = (String) parsed.get("condition");
+        
+        StringBuilder explanation = new StringBuilder();
+        explanation.append("Based on your symptoms (").append(symptom).append("), ");
+        explanation.append("this could be related to ").append(condition).append(".\n\n");
+        explanation.append("Common causes may include:\n");
+        explanation.append("• Minor irritation or inflammation\n");
+        explanation.append("• Stress or lifestyle factors\n");
+        explanation.append("• Underlying medical conditions\n\n");
+        explanation.append("💡 If you'd like, I can:\n");
+        explanation.append("→ Show nearby hospitals\n");
+        explanation.append("→ Help book an appointment");
+        
+        return explanation.toString();
+    }
+
+    /**
+     * Show hospitals from saved session when user chooses to see them
+     */
+    private ResponseEntity<?> showHospitalsFromSession(ChatSession session, Double userLat, Double userLng) {
+        try {
+            String specialty = session.getSpecialization();
+            
+            // Fetch all hospitals - we'll filter manually
+            List<Clinic> clinics = clinicRepository.findAll();
+            
+            // Filter by specialty if available
+            if (specialty != null && !specialty.isEmpty()) {
+                clinics = clinics.stream()
+                    .filter(c -> c.getSpecializations() != null && 
+                                c.getSpecializations().stream()
+                                .anyMatch(s -> s.getSpecialization().equalsIgnoreCase(specialty)))
+                    .collect(Collectors.toList());
+            }
+
+            // Sort by distance if coordinates provided
+            List<Clinic> sortedClinics = new ArrayList<>(clinics);
+            if (userLat != null && userLng != null) {
+                sortedClinics.sort((a, b) -> {
+                    double distA = calculateDistance(userLat, userLng, a.getLatitude(), a.getLongitude());
+                    double distB = calculateDistance(userLat, userLng, b.getLatitude(), b.getLongitude());
+                    return Double.compare(distA, distB);
+                });
+            }
+
+            // Take top results
+            List<Clinic> topClinics = sortedClinics.stream().limit(5).collect(Collectors.toList());
+            
+            // Build response
+            Map<String, Object> result = new HashMap<>();
+            result.put("type", "hospitals");
+            result.put("step", "hospital_selection");
+            result.put("specialty", specialty);
+            
+            List<Map<String, Object>> hospitalList = topClinics.stream().map(clinic -> {
+                Map<String, Object> hospitalMap = new HashMap<>();
+                hospitalMap.put("id", clinic.getId());
+                hospitalMap.put("clinicId", clinic.getId());
+                hospitalMap.put("name", clinic.getName());
+                hospitalMap.put("city", clinic.getCity());
+                hospitalMap.put("state", clinic.getState());
+                hospitalMap.put("rating", clinic.getRating() != null ? clinic.getRating() : 0.0);
+                hospitalMap.put("latitude", clinic.getLatitude());
+                hospitalMap.put("longitude", clinic.getLongitude());
+                hospitalMap.put("address", clinic.getAddress());
+                hospitalMap.put("phoneNumber", clinic.getPhone());
+                hospitalMap.put("image", clinic.getImageUrl());
+                
+                // Convert specializations to string list
+                List<String> specialtyNames = clinic.getSpecializations() != null 
+                    ? clinic.getSpecializations().stream()
+                        .map(Specialization::getSpecialization)
+                        .collect(Collectors.toList())
+                    : new ArrayList<>();
+                hospitalMap.put("specialties", specialtyNames);
+
+                if (userLat != null && userLng != null) {
+                    double distance = calculateDistance(userLat, userLng, clinic.getLatitude(), clinic.getLongitude());
+                    hospitalMap.put("distance", Math.round(distance * 10.0) / 10.0);
+                }
+                return hospitalMap;
+            }).collect(Collectors.toList());
+
+            result.put("hospitals", hospitalList);
+            result.put("reply", "I recommend consulting a " + specialty + " specialist. Here are " + 
+                       topClinics.size() + " hospital(s) that may help:");
+            result.put("sessionId", session.getSessionId());
+            
+            // Update session step
+            session.setCurrentStep("hospital_selection");
+            session.setUpdatedAt(LocalDateTime.now());
+            chatSessionRepository.save(session);
+
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            System.err.println("Error showing hospitals from session: " + e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("type", "text");
+            error.put("reply", "I encountered an error fetching hospitals. Please try again.");
+            return ResponseEntity.ok(error);
         }
     }
 
@@ -730,6 +865,7 @@ public class ChatController {
             doctorInfo.put("specialization", doctor.getSpecialization());
             doctorInfo.put("qualifications", doctor.getQualifications());
             doctorInfo.put("experience", doctor.getExperience());
+            doctorInfo.put("imageUrl", doctor.getImageUrl() != null ? doctor.getImageUrl() : "");
             doctorList.add(doctorInfo);
         }
 

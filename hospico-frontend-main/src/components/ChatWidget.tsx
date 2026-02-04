@@ -325,15 +325,30 @@ const ChatWidget = ({ autoOpen = false, embedMode = false }: ChatWidgetProps) =>
     };
 
     return (
-        <div className={embedMode ? "fixed inset-0 flex items-center justify-center z-50 pointer-events-none" : `fixed z-50 flex flex-col items-end gap-4 pointer-events-none ${isOpen ? 'inset-0 sm:inset-auto sm:bottom-6 sm:right-6' : 'bottom-6 right-6'}`}>
+        <div className="fixed z-50 pointer-events-none">
+            {/* Blurred Backdrop - Only when Open */}
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
-                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                        className={`w-full h-full sm:w-[380px] sm:h-[700px] ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} shadow-2xl border flex flex-col overflow-hidden pointer-events-auto`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto z-40"
+                        onClick={() => setIsOpen(false)}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* Centered Chatbot Popup */}
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: -20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -20 }}
+                        className={`fixed inset-0 flex items-center justify-center pointer-events-auto z-50`}
                     >
+                        <div className={`w-11/12 h-5/6 max-w-2xl max-h-[99vh] ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} shadow-2xl border rounded-2xl flex flex-col overflow-hidden pointer-events-auto`}>
                         {/* Header */}
                         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 flex items-center justify-between text-white shadow-md">
                             <div className="flex items-center gap-3">
@@ -375,6 +390,24 @@ const ChatWidget = ({ autoOpen = false, embedMode = false }: ChatWidgetProps) =>
                                         </div>
                                     </div>
 
+                                    {/* Symptom Explanation Options */}
+                                    {msg.step === 'symptom_explanation' && (
+                                        <div className="ml-10 mt-3 flex flex-col gap-2 max-w-[calc(100%-40px)]">
+                                            <button
+                                                onClick={() => handleSendMessage('Show nearby hospitals')}
+                                                className={`text-left px-4 py-2.5 rounded-lg border-2 transition-all text-sm font-medium ${theme === 'dark' ? 'bg-blue-600 border-blue-500 hover:bg-blue-700 text-white' : 'bg-blue-500 border-blue-400 hover:bg-blue-600 text-white'}`}
+                                            >
+                                                🏥 Show nearby hospitals
+                                            </button>
+                                            <button
+                                                onClick={() => handleSendMessage('Book an appointment')}
+                                                className={`text-left px-4 py-2.5 rounded-lg border-2 transition-all text-sm font-medium ${theme === 'dark' ? 'bg-green-600 border-green-500 hover:bg-green-700 text-white' : 'bg-green-500 border-green-400 hover:bg-green-600 text-white'}`}
+                                            >
+                                                📅 Book an appointment
+                                            </button>
+                                        </div>
+                                    )}
+
                                     {/* Hospitals scroll outside bubbles for better layout */}
                                     {msg.hospitals && msg.hospitals.length > 0 && msg.step === 'hospital_selection' && (
                                         <div className="ml-10 mt-2 space-y-2 max-w-[calc(100%-40px)] overflow-hidden">
@@ -396,22 +429,50 @@ const ChatWidget = ({ autoOpen = false, embedMode = false }: ChatWidgetProps) =>
                                         </div>
                                     )}
 
-                                    {/* Doctor Selection */}
+                                    {/* Doctor Selection - Cards */}
                                     {msg.doctors && msg.doctors.length > 0 && msg.step === 'doctor_selection' && (
-                                        <div className="ml-10 mt-2 space-y-2 max-w-[calc(100%-40px)]">
-                                            {msg.doctors.map((doctor) => (
-                                                <button
-                                                    key={doctor.id}
-                                                    onClick={() => handleBookingAction('select_doctor', doctor.id)}
-                                                    className={`w-full text-left p-3 rounded-lg border-2 transition-all ${theme === 'dark' ? 'bg-gray-800 border-gray-700 hover:border-blue-500 hover:bg-gray-750' : 'bg-white border-gray-200 hover:border-blue-500 hover:bg-blue-50'}`}
-                                                >
-                                                    <div className="font-semibold text-sm">{doctor.name}</div>
-                                                    <div className="text-xs text-gray-500 mt-1">{doctor.specialization}</div>
-                                                    {doctor.qualifications && (
-                                                        <div className="text-[10px] text-gray-400 mt-0.5">{doctor.qualifications}</div>
-                                                    )}
-                                                </button>
-                                            ))}
+                                        <div className="ml-10 mt-2 space-y-2 max-w-[calc(100%-40px)] overflow-hidden">
+                                            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide snap-x w-full">
+                                                {msg.doctors.map((doctor, dIdx) => (
+                                                    <div key={`${doctor.id}-${dIdx}`} className="min-w-[220px] max-w-[220px] snap-start relative group">
+                                                        <div className={`h-full p-4 rounded-lg border-2 transition-all flex flex-col justify-between ${theme === 'dark' ? 'bg-gray-800 border-gray-700 group-hover:border-blue-500 group-hover:bg-gray-750' : 'bg-white border-gray-200 group-hover:border-blue-500 group-hover:bg-blue-50'}`}>
+                                                            {/* Doctor Image */}
+                                                            {doctor.imageUrl && (
+                                                                <div className="mb-3 -mx-4 -mt-4 mb-2">
+                                                                    <img 
+                                                                        src={doctor.imageUrl} 
+                                                                        alt={doctor.name}
+                                                                        className="w-full h-32 object-cover rounded-t-md"
+                                                                        onError={(e) => {
+                                                                            e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect fill="%23ddd" width="100" height="100"/%3E%3Ctext x="50" y="50" dominant-baseline="middle" text-anchor="middle" font-size="14"%3E👨‍⚕️%3C/text%3E%3C/svg%3E';
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                            
+                                                            {/* Doctor Info */}
+                                                            <div>
+                                                                <div className="font-bold text-sm text-blue-600 dark:text-blue-400 mb-1">👨‍⚕️ Doctor</div>
+                                                                <div className="font-semibold text-sm mb-2 line-clamp-2">{doctor.name}</div>
+                                                                <div className={`text-xs mb-2 font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                                    {doctor.specialization}
+                                                                </div>
+                                                                {doctor.qualifications && (
+                                                                    <div className={`text-[10px] mb-3 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                                        {doctor.qualifications}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <button
+                                                                onClick={() => handleBookingAction('select_doctor', doctor.id)}
+                                                                className="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-2 rounded-md font-semibold transition-colors"
+                                                            >
+                                                                Select
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
 
@@ -555,18 +616,37 @@ const ChatWidget = ({ autoOpen = false, embedMode = false }: ChatWidgetProps) =>
                             </div>
                             <p className="text-[11px] text-center mt-2 text-gray-400 underline">Not a professional diagnosis. Consult a doctor.</p>
                         </div>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {!embedMode && (
-                <button
-                    onClick={() => isAuthenticated ? setIsOpen(!isOpen) : setShowAuthPrompt(!showAuthPrompt)}
-                    className="p-4 rounded-full bg-indigo-600 text-white shadow-xl pointer-events-auto hover:scale-105 transition-transform"
-                >
-                    {isOpen ? <X size={28} /> : <MessageCircle size={28} />}
-                </button>
-            )}
+            {/* Floating Toggle Button - Always Visible */}
+            <motion.button
+                onClick={() => {
+                    if (!isAuthenticated) {
+                        setShowAuthPrompt(true);
+                        setTimeout(() => setShowAuthPrompt(false), 5000);
+                    } else {
+                        setIsOpen(!isOpen);
+                    }
+                }}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg hover:shadow-xl transition-shadow pointer-events-auto flex items-center justify-center z-50"
+            >
+                <AnimatePresence mode="wait">
+                    {isOpen ? (
+                        <motion.div key="close" initial={{ rotate: -90 }} animate={{ rotate: 0 }} exit={{ rotate: 90 }}>
+                            <X size={24} />
+                        </motion.div>
+                    ) : (
+                        <motion.div key="chat" initial={{ rotate: 90 }} animate={{ rotate: 0 }} exit={{ rotate: -90 }}>
+                            <MessageCircle size={24} />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </motion.button>
 
             {showAuthPrompt && !isAuthenticated && (
                 <div className={`absolute bottom-20 right-0 w-64 p-4 rounded-xl shadow-2xl border ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200'} pointer-events-auto`}>

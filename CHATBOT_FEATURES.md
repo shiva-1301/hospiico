@@ -10,28 +10,53 @@ The HealthMate Bot is an AI-powered health assistant integrated into the HospiCo
 
 ### 1. **AI-Powered Symptom Analysis & Health Assistance**
 - **How it works**: Uses Gemini AI (Google's LLM) to analyze user-described symptoms
+- **Two-Step Symptom Flow** (NEW):
+  1. **Explanation First**: When symptoms detected, provides calm explanation of possible causes
+  2. **User Choice**: Offers options to show hospitals or book appointment
+  3. **No Forced Hospital Display**: Gives user control over next steps
+
 - **Capabilities**:
   - Analyzes symptoms and suggests medical conditions
+  - Provides helpful, non-alarming explanations of possible causes
   - Recommends appropriate medical specialties (ENT, Cardiology, Neurology, etc.)
-  - Finds hospitals with matching specialties
+  - Finds hospitals with matching specialties (only when user chooses)
   - Shows hospitals sorted by distance from user location
   - Provides health guidance and information
   - Maintains conversation history for contextual responses
+  - Stores symptom data in session for deferred hospital lookup
+
 - **Backend API**: `POST /api/chat`
   - Analyzes symptoms using Gemini AI
   - Maps conditions to medical specialties
-  - Queries database for hospitals with matching specialties
-  - Calculates distance from user location (lat/lng)
-- **Response Format**:
+  - **NEW**: Returns explanation with options instead of immediate hospital list
+  - Stores symptom/specialty data in ChatSession
+  - Detects when user wants hospitals ("show hospitals", "book appointment")
+  - Retrieves stored session data to show relevant hospitals
+
+- **Symptom Explanation Response**:
   ```json
   {
-    "reply": "Based on your symptoms (Ear pain), this could be related to Ear infection...",
+    "reply": "Based on your symptoms (Ear pain), this could be related to Ear infection.\n\nCommon causes may include:\n• Minor irritation or inflammation\n• Stress or lifestyle factors\n• Underlying medical conditions\n\n💡 If you'd like, I can:\n→ Show nearby hospitals\n→ Help book an appointment",
+    "type": "symptom_explanation",
+    "step": "symptom_explanation",
+    "sessionId": "abc-123",
+    "specialty": "ENT",
+    "hospitalCount": 5
+  }
+  ```
+
+- **Hospital Display Response** (when user chooses):
+  ```json
+  {
+    "reply": "I recommend consulting a ENT specialist. Here are 5 hospital(s) that may help:",
     "type": "hospitals",
     "step": "hospital_selection",
     "specialty": "ENT",
-    "hospitals": [...]
+    "hospitals": [...],
+    "sessionId": "abc-123"
   }
   ```
+
 - **Disclaimer**: "⚠️ This is not a medical diagnosis. Please consult a qualified doctor."
 
 ### 2. **Location-Based Hospital Search**
@@ -182,12 +207,21 @@ The HealthMate Bot is an AI-powered health assistant integrated into the HospiCo
 ```
 
 **Key Functions**:
-- `chat()` - Main chat handler
-- `analyzeSymptoms()` - AI symptom analysis using Gemini
+- `chat()` - Main chat handler with user intent detection
+- `handleSymptomResponse()` - AI symptom analysis using Gemini
+- `buildSymptomExplanation()` - **NEW**: Creates helpful symptom explanations
+- `showHospitalsFromSession()` - **NEW**: Retrieves hospitals from stored session
 - `extractSymptoms()` - Extract symptoms from text
 - `mapToSpecialty()` - Maps conditions to medical specialties
 - `findNearbyHospitals()` - Location-based hospital search
 - `calculateDistance()` - Haversine formula for distance calculation
+
+**NEW Logic Flow**:
+1. Detects if message contains symptoms
+2. If yes → Returns explanation with options (stores data in session)
+3. Detects if user wants hospitals ("show", "book", etc.)
+4. If yes → Retrieves recent session and displays hospitals
+5. Otherwise → Normal AI chat response
 
 **Response Types**:
 1. **Symptom Analysis**:
@@ -210,20 +244,13 @@ The HealthMate Bot is an AI-powered health assistant integrated into the HospiCo
    }
    ```
 
-2. **Location Search**:
-   ```json
-   {
-     "reply": "Found 5 hospitals in hyderabad",
-   Intelligent Features
-
-### 1. **Context-Aware Responses**
-- Maintains conversation context across multiple messages
-- Remembers previously selected hospital/doctor
+2.**NEW**: Stores symptom data in session for deferred lookup
 - Provides relevant follow-up suggestions
 
 ### 2. **Natural Language Understanding**
 - Understands varied symptom descriptions
 - Recognizes location queries in multiple formats
+- **NEW**: Detects user intent ("show hospitals", "book appointment")
 - Handles casual conversation naturally
 
 ### 3. **Smart Specialty Mapping**
@@ -232,6 +259,22 @@ The HealthMate Bot is an AI-powered health assistant integrated into the HospiCo
 - Suggests multiple specialties when appropriate
 
 ### 4. **Distance-Based Recommendations**
+- Calculates real-time distance from user location
+- Sorts hospitals by proximity
+- Shows distance in kilometers
+
+### 5. **Validation & Error Handling**
+- Validates appointment dates (future only)
+- Checks doctor availability
+- Validates patient information format
+- Provides helpful error messages
+
+### 6. **Patient-Centric Symptom Flow** (NEW)
+- Explains symptoms before overwhelming with hospital options
+- Gives user control over next steps
+- Provides calm, non-alarming explanations
+- Stores context for seamless continuation
+- Respects user autonomy in healthcare decisiondations**
 - Calculates real-time distance from user location
 - Sorts hospitals by proximity
 - Shows distance in kilometers
@@ -303,6 +346,7 @@ The HealthMate Bot is an AI-powered health assistant integrated into the HospiCo
 - **Local State Variables**:
   - `messages` - Chat history
   - `selectedHospital` - Current hospital selection
+  SYMPTOM_EXPLANATION: 'symptom_explanation',  // NEW
   - `selectedDoctor` - Current doctor selection
   - `selectedDate` - Appointment date
   - `selectedTime` - Time slot
@@ -339,11 +383,14 @@ const STEPS = {
 - `doctors` - Doctor profiles with specialty, qualifications
 - `appointments` - Booking records
 - `patients` - Patient information
-- `specialties` - Medical specialty mappings
-
-### Key Dependencies
-- `framer-motion` - Animations
-- `lucide-react` - Icons (Mic, Volume2, Send, X)
+3. ✅ **Symptom Explanation Flow** - **NEW**: Explains causes before showing hospitals
+4. ✅ **User Choice Options** - **NEW**: Buttons for show hospitals/book appointment
+5. ✅ **Session-Based Context** - **NEW**: Stores symptom data for deferred lookup
+6. ✅ **Hospital Search** - Location and specialty-based search
+7. ✅ **Doctor Selection** - Browse and select doctors
+8. ✅ **Voice Input/Output** - Speech recognition and text-to-speech
+9. ✅ **Multi-step Conversations** - Guided booking workflow
+10. ✅ **Specialty Mapping** - Smart specialty recommendations
 - `@google/generative-ai` - Gemini AI integration
 - `axios` - HTTP requests
 - `react-redux` - State management
@@ -370,9 +417,25 @@ ChaCompleted Features ✅
 2. **Live Doctors
 
 ### Frontend
-- **Main Component**: `hospico-frontend-main/src/components/ChatWidget.tsx` (~700 lines)
-- **Styles**: Inline Tailwind CSS + Framer Motion
-- **Routes**: Accessible on all pages + `/embed` route
+- **Main Component**: `hospico-front (NEW Flow)
+```
+User: "I'm having ear pain"
+Bot: Analyzes symptoms → Provides explanation:
+     "Based on your symptoms (Ear pain), this could be related to Ear infection.
+     
+     Common causes may include:
+     • Minor irritation or inflammation
+     • Stress or lifestyle factors
+     • Underlying medical conditions
+     
+     💡 If you'd like, I can:
+     → Show nearby hospitals
+     → Help book an appointment"
+     
+     [Shows 2 buttons: "🏥 Show nearby hospitals" | "📅 Book an appointment"]
+
+User: Clicks "Show nearby hospitals" (or types "show hospitals")
+Bot: Shows 2 hospitals with ENT specialists sorted by distance
 
 ### Backend
 - **Chat Controller**: `backend/src/main/java/com/hospitalfinder/backend/controller/ChatController.java`
@@ -456,12 +519,40 @@ Bot: "Found 5 hospitals in hyderabad" + hospital cards
 
 ---
 
-## File Location
+## File Locations
 
-**Component**: `src/components/ChatWidget.tsx`  
-**Lines**: 554  
-**Size**: ~28KB
+### Frontend
+- **Main Component**: `hospico-frontend-main/src/components/ChatWidget.tsx` (~700 lines)
+- **Styles**: Inline Tailwind CSS + Framer Motion
+- **Routes**: Accessible on all pages + `/embed` route
+
+### Backend
+- **Chat Controller**: `backend/src/main/java/com/hospitalfinder/backend/controller/ChatController.java`
+- **Hospital Service**: `backend/src/main/java/com/hospitalfinder/backend/service/HospitalService.java`
+- **Doctor Service**: `backend/src/main/java/com/hospitalfinder/backend/service/DoctorService.java`
+- **Appointment Service**: `backend/src/main/java/com/hospitalfinder/backend/service/AppointmentService.java`
+
+### Configuration
+- **Gemini API**: Configured in `application.yml`
+- **Database**: PostgreSQL via Spring Data JPA
+- **Base URL**: `http://localhost:8080/api`
 
 ---
 
-*Last Updated: December 21, 2024*
+## Recent Updates (February 4, 2026)
+
+### New Symptom Explanation Feature
+- **Problem Solved**: Previously, the chatbot would immediately show hospital cards when symptoms were mentioned, which could overwhelm users or feel pushy.
+- **Solution**: Implemented a two-step flow where the bot first explains possible causes of symptoms in a calm, helpful manner, then offers choices via buttons.
+- **User Benefit**: Gives users control and information before making healthcare decisions.
+- **Technical Changes**:
+  - Added `symptom_explanation` step in conversation flow
+  - Created `buildSymptomExplanation()` method for calm explanations
+  - Added `showHospitalsFromSession()` to retrieve hospitals on-demand
+  - Frontend displays action buttons when `step === 'symptom_explanation'`
+  - Backend detects user intent from follow-up messages
+  - Fixed React error by converting Specialization objects to string arrays
+
+---
+
+*Last Updated: February 4, 2026*

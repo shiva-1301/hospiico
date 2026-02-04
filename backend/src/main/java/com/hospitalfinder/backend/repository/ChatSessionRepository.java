@@ -12,5 +12,7 @@ public interface ChatSessionRepository extends MongoRepository<ChatSession, Stri
     
     Optional<ChatSession> findBySessionId(String sessionId);
     
+    Optional<ChatSession> findFirstByOrderByCreatedAtDesc();
+    
     void deleteByExpiresAtBefore(LocalDateTime now);
 }
